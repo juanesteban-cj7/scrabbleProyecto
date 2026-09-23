@@ -17,20 +17,35 @@ int menu() {
 	cin >> option;
 	return option;
 }
+void start(){
+    cout << "JUEGO INICIADO"; 
+}
+int changeName(){
+    int newNickname; 
+    cout << "Ingresa tu nuevo nickname: "; 
+    cin >> newNickname;
+    return newNickname;  
+}
+void log(){
+    cout << "FUNCION EN DESARROLLO"; 
+}
+void exit(){
+    cout << "SALIENDO DEL PROGRAMA..."; 
+}
 
 void interactivePanel(int x){
     switch(x){
         case 1: 
-            cout << "INICIANDO JUEGO..."; 
+            start();  
             break; 
         case 2: 
-            cout << "TRANSLADANDO AL PANEL DE CAMBIAR NOMBRE..."; 
+            changeName();  
             break; 
         case 3: 
-            cout << "MOSTRANDO REGISTRO..."; 
+            log(); 
             break; 
         case 4: 
-            cout << "SALIENDO DEL JUEGO..."; 
+            exit(); 
             break; 
         default: 
             cout << "ESA OPCIÓN ES INVÁLIDA" << "(" << x << ")"; 
