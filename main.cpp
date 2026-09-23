@@ -1,6 +1,12 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 using namespace std;
+
+void dataVerification(){
+    fstream UserLog("userdata.txt"); 
+    UserLog << "Escribiendo cosas para el txt, testing solamente jejejej";
+}
 
 int menu() {
 	int option;
@@ -20,8 +26,8 @@ int menu() {
 void start(){
     cout << "JUEGO INICIADO"; 
 }
-int changeName(){
-    int newNickname; 
+string changeName(){
+    string newNickname; 
     cout << "Ingresa tu nuevo nickname: "; 
     cin >> newNickname;
     return newNickname;  
@@ -39,7 +45,7 @@ void interactivePanel(int x){
             start();  
             break; 
         case 2: 
-            changeName();  
+            cout << changeName();  
             break; 
         case 3: 
             log(); 
@@ -53,6 +59,7 @@ void interactivePanel(int x){
 }
 
 int main() {
+    dataVerification();
 	int option = menu();
 	interactivePanel(option); 
 	return 0;
