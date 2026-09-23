@@ -1,0 +1,19 @@
+#include <iostream>
+#include <string>
+using namespace std; 
+
+int menu(){
+	cout << "----------------------------" << endl; 
+	cout << "         ____                 " << endl;
+	cout << R"(|\   /| |     |\   | |    | )" << endl;   
+	cout << R"(| \ / | |____ | \  | |    | )" << endl; 
+	cout << R"(|     | |     |  \ | |    | )" << endl;
+	cout << R"(|     | |____ |   \| |____| )" << endl;
+	cout << "                            " << endl; 
+	cout << "----------------------------" << endl;
+}
+
+int main(){ 
+	menu(); 
+	return 0; 
+}
