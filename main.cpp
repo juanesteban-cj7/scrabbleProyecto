@@ -3,9 +3,33 @@
 #include <string>
 using namespace std;
 
-void dataVerification(){
-    fstream UserLog("userdata.txt"); 
-    UserLog << "Escribiendo cosas para el txt, testing solamente jejejej";
+void saveNickname(const string& nickname){
+    ofstream userFile("userdata.txt"); 
+
+    if(userFile.is_open()){
+        userFile << nickname; 
+        userFile.close(); 
+    } else{
+        cout << "No se pudo guardar el nickname \n";
+    }
+}
+
+void dataVerification(string& nickname){
+    ifstream userFile("userdata.txt"); 
+
+    if(userFile >> nickname) {
+        cout << "Bienvenido nuevamente, " << nickname << "\n"; 
+    } else{
+        cout << "Primera vez que ejecutas el programa. \n"; 
+        cout << "Ingresa tu nickname: "; 
+        cin >> nickname; 
+
+        saveNickname(nickname); 
+
+        cout << "Bienvenido, " << nickname << "\n"; 
+    }
+
+    userFile.close(); 
 }
 
 int menu() {
@@ -24,19 +48,20 @@ int menu() {
 	return option;
 }
 void start(){
-    cout << "JUEGO INICIADO"; 
+    cout << "JUEGO INICIADO\n"; 
 }
 string changeName(){
     string newNickname; 
     cout << "Ingresa tu nuevo nickname: "; 
     cin >> newNickname;
+    saveNickname(newNickname);
     return newNickname;  
 }
 void log(){
-    cout << "FUNCION EN DESARROLLO"; 
+    cout << "FUNCION EN DESARROLLO\n"; 
 }
 void exit(){
-    cout << "SALIENDO DEL PROGRAMA..."; 
+    cout << "SALIENDO DEL PROGRAMA...\n"; 
 }
 
 void interactivePanel(int x){
@@ -54,12 +79,13 @@ void interactivePanel(int x){
             exit(); 
             break; 
         default: 
-            cout << "ESA OPCIÓN ES INVÁLIDA" << "(" << x << ")"; 
+            cout << "ESA OPCIÓN ES INVÁLIDA" << "(" << x << ")\n"; 
     }
 }
 
 int main() {
-    dataVerification();
+    string nickname;
+    dataVerification(nickname);
 	int option = menu();
 	interactivePanel(option); 
 	return 0;
