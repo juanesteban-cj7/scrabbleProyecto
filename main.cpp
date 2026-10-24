@@ -3,7 +3,8 @@
 #include <string>
 using namespace std;
 
-// TESTING GITHUB
+char table[15][15];
+
 //MENU FUNCTIONS
 void saveNickname(const string& nickname); 
 void dataVerification(string& nickname); 
@@ -14,6 +15,8 @@ void log();
 void exit(); 
 void interactivePanel(int x); 
 
+// IN-GAME FUNCTIONS
+void dashboard(); 
 
 int main() {
     string nickname;
@@ -69,7 +72,13 @@ int menu() {
 }
 
 void start(){
-    cout << "JUEGO INICIADO\n"; 
+    dashboard(); 
+    for(int i = 0; i < 15; i++){
+        for(int j = 0; j < 15; j++){
+           cout << table[i][j] << " "; 
+        }
+        cout << "\n\n"; 
+    }
 }
 
 string changeName(){
@@ -104,5 +113,13 @@ switch(x){
             break; 
         default: 
             cout << "ESA OPCIÓN ES INVÁLIDA" << "(" << x << ")\n"; 
+    }
+}
+
+void dashboard(){
+    for(int i = 0; i < 15; i++){
+        for(int j = 0; j < 15; j++){
+           table[i][j] = 219; 
+        }
     }
 }
