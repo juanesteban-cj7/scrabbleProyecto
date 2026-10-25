@@ -6,8 +6,8 @@ using namespace std;
 char table[15][15];
 
 //MENU FUNCTIONS
-void saveNickname(const string& nickname); 
-void dataVerification(string& nickname); 
+void saveNickname(const string& nickname1, const string& nickname2); 
+void dataVerification(string& nickname1); 
 int menu(); 
 void start(); 
 string changeName(); 
@@ -19,37 +19,40 @@ void interactivePanel(int x);
 void dashboard(); 
 
 int main() {
-    string nickname;
-    dataVerification(nickname);
+    string nickname1, nickname2;
+    dataVerification(nickname1);
 	int option = menu();
 	interactivePanel(option); 
 	return 0;
 }
 
-void saveNickname(const string& nickname){
+void saveNickname(const string& nickname1, const string& nickname2){
     ofstream userFile("userdata.txt"); 
 
     if(userFile.is_open()){
-        userFile << nickname; 
+        userFile << "Usuario 1: " << nickname1 << endl;
+        userFile << "Usuario 2: " << nickname2 << endl; 
         userFile.close(); 
     } else{
         cout << "No se pudo guardar el nickname \n";
     }
 }
 
-void dataVerification(string& nickname){
+void dataVerification(string& nickname1, string& nickname2){
     ifstream userFile("userdata.txt"); 
 
-    if(userFile >> nickname) {
-        cout << "Bienvenido nuevamente, " << nickname << "\n"; 
+    if(userFile >> nickname1 && userFile >> nickname2) {
+        cout << "Bienvenidos nuevamente, " << nickname1 << " y " << nickname2 << "\n"; 
     } else{
         cout << "Primera vez que ejecutas el programa. \n"; 
-        cout << "Ingresa tu nickname: "; 
-        cin >> nickname; 
+        cout << "Ingresa tu nickname (User 1): "; 
+        cin >> nickname1; 
+        cout << "Ingresa tu nickname (User 2): "; 
+        cin >> nickname2;
 
-        saveNickname(nickname); 
+        saveNickname(nickname1, nickname2); 
 
-        cout << "Bienvenido, " << nickname << "\n"; 
+        cout << "Bienvenidos, " << nickname1 << " y " << nickname2 << "\n"; 
     }
 
     userFile.close(); 
@@ -82,11 +85,15 @@ void start(){
 }
 
 string changeName(){
-    string newNickname; 
-    cout << "Ingresa tu nuevo nickname: "; 
-    cin >> newNickname;
-    saveNickname(newNickname);
-    return newNickname;  
+    string newNickname1, newNickname2;
+    cout << "Ingresa tu nuevo nickname (User 1): "; 
+    cin >> newNickname1;
+    cout << "Ingresa tu nuevo nickname (User 2): ";
+    cin >> newNickname2; 
+
+    saveNickname(newNickname1, newNickname2); 
+
+    return newNickname1;
 }
 
 void log(){
