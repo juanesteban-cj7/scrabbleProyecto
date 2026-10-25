@@ -7,7 +7,7 @@ char table[15][15];
 
 //MENU FUNCTIONS
 void saveNickname(const string& nickname1, const string& nickname2); 
-void dataVerification(string& nickname1); 
+void dataVerification(string& nickname1, string& nickname2); 
 int menu(); 
 void start(); 
 string changeName(); 
@@ -20,9 +20,8 @@ void dashboard();
 
 int main() {
     string nickname1, nickname2;
-    dataVerification(nickname1);
-	int option = menu();
-	interactivePanel(option); 
+    dataVerification(nickname1, nickname2);
+	int option = menu(); 
 	return 0;
 }
 
@@ -30,8 +29,7 @@ void saveNickname(const string& nickname1, const string& nickname2){
     ofstream userFile("userdata.txt"); 
 
     if(userFile.is_open()){
-        userFile << "Usuario 1: " << nickname1 << endl;
-        userFile << "Usuario 2: " << nickname2 << endl; 
+        userFile << nickname1 << '\n' << nickname2 << '\n';
         userFile.close(); 
     } else{
         cout << "No se pudo guardar el nickname \n";
@@ -71,6 +69,7 @@ int menu() {
     cout << "----------------------------" << endl;
     cout << "Seleccione la opcion que desea\n- Iniciar Juego (1)\n- Cambiar nombre (2)\n- Mostrar Registro de resultados (3)\n- Salir del juego (4)\n = ";
     cin >> option;
+    interactivePanel(option);
     return option;
 }
 
@@ -110,7 +109,8 @@ switch(x){
             start();  
             break; 
         case 2: 
-            cout << changeName();  
+            changeName(); 
+            menu();
             break; 
         case 3: 
             log(); 
