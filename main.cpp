@@ -89,7 +89,7 @@ void start(){
     int coordY = 7;
     table[coordY][coordX] = 206;
     
-    cout << "OPRIME CUALQUIER BOTON\n";
+    dashboardPrint();
 
     while(true){
         int key = _getch();
@@ -99,16 +99,16 @@ void start(){
             int newX = coordX; 
 
             switch (_getch()) { // Segunda verificación dentro de las teclas especiales
-                case 72:
+                case KEY_UP:
                     newY--; 
                     break;
-                case 80:
+                case KEY_DOWN:
                     newY++; 
                     break;
-                case 75:
+                case KEY_LEFT:
                     newX--; 
                     break;
-                case 77:
+                case KEY_RIGHT:
                     newX++; 
                     break;
             }
@@ -118,6 +118,7 @@ void start(){
                 coordX = newX; 
                 table[coordY][coordX] = 206; 
             }
+            cout << "\033[2J\033[1;1H"; // Hace un clear en la terminal
             dashboardPrint();
         }
         else if(key == 46){
@@ -180,7 +181,7 @@ void dashboard(){
 void dashboardPrint(){
     for(int i = 0; i < 15; i++){
         for(int j = 0; j < 15; j++){
-           cout << table[i][j] << "  "; 
+           cout << " " << table[i][j] << " "; 
         }
         cout << "\n\n"; 
     }
