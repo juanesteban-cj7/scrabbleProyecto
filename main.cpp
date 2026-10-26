@@ -1,9 +1,17 @@
 #include <iostream>
-#include <fstream>
+#include <fstream> // EDICION DE ARCHIVOS
 #include <string>
+#include <conio.h>  
 using namespace std;
 
+const int KEY_UP = 72;
+const int KEY_DOWN = 80;
+const int KEY_LEFT = 75;
+const int KEY_RIGHT = 77;
+
 char table[15][15];
+
+
 
 //MENU FUNCTIONS
 void saveNickname(const string& nickname1, const string& nickname2); 
@@ -17,11 +25,12 @@ void interactivePanel(int x);
 
 // IN-GAME FUNCTIONS
 void dashboard(); 
+void dashboardPrint(); 
 
 int main() {
     string nickname1, nickname2;
     dataVerification(nickname1, nickname2);
-	int option = menu(); 
+	menu(); 
 	return 0;
 }
 
@@ -74,13 +83,50 @@ int menu() {
 }
 
 void start(){
-    dashboard(); 
-    for(int i = 0; i < 15; i++){
-        for(int j = 0; j < 15; j++){
-           cout << table[i][j] << " "; 
+    dashboard();
+     
+    int coordX = 7;  
+    int coordY = 7;
+    table[coordY][coordX] = 206;
+    
+    cout << "OPRIME CUALQUIER BOTON\n";
+
+    while(true){
+        int key = _getch();
+
+        if (key == 0 || key == 224) { // 0 y 224 inician teclas especiales
+            int newY = coordY; 
+            int newX = coordX; 
+
+            switch (_getch()) { // Segunda verificación dentro de las teclas especiales
+                case 72:
+                    newY--; 
+                    break;
+                case 80:
+                    newY++; 
+                    break;
+                case 75:
+                    newX--; 
+                    break;
+                case 77:
+                    newX++; 
+                    break;
+            }
+            if(newY >= 0 && newY < 15 && newX >= 0 && newX < 15){ // CASILLA ANTERIOR REGRESA A SER UN BLOQUE
+                table[coordY][coordX] = 219; 
+                coordY = newY; 
+                coordX = newX; 
+                table[coordY][coordX] = 206; 
+            }
+            dashboardPrint();
         }
-        cout << "\n\n"; 
+        else if(key == 46){
+            cout << "Programa detenido.";
+            break; 
+        }
+        
     }
+
 }
 
 string changeName(){
@@ -128,5 +174,14 @@ void dashboard(){
         for(int j = 0; j < 15; j++){
            table[i][j] = 219; 
         }
+    }
+}
+
+void dashboardPrint(){
+    for(int i = 0; i < 15; i++){
+        for(int j = 0; j < 15; j++){
+           cout << table[i][j] << "  "; 
+        }
+        cout << "\n\n"; 
     }
 }
