@@ -23,7 +23,7 @@ void interactivePanel(int x);
 
 // IN-GAME FUNCTIONS
 void dashboard();
-void dashboardPrint();
+void dashboardPrint(int cursorY, int cursorX);
 void wValidation(string word); 
 
 int main() {
@@ -93,9 +93,8 @@ void start(){
 
     int coordX = 7;
     int coordY = 7;
-    table[coordY][coordX] = 206;
 
-    dashboardPrint();
+    dashboardPrint(coordY, coordX);
 
     while(true){
         int key = _getch();
@@ -118,14 +117,12 @@ void start(){
                     newX++;
                     break;
             }
-            if(newY >= 0 && newY < 15 && newX >= 0 && newX < 15){ // CASILLA ANTERIOR REGRESA A SER UN BLOQUE
-                table[coordY][coordX] = 219;
+            if(newY >= 0 && newY < 15 && newX >= 0 && newX < 15){ 
                 coordY = newY;
                 coordX = newX;
-                table[coordY][coordX] = 206;
             }
             cout << "\033[2J\033[1;1H"; // Hace un clear en la terminal
-            dashboardPrint();
+            dashboardPrint(coordY, coordX);
         }
         else if(key == 46){
             cout << "Programa detenido.";
@@ -135,8 +132,10 @@ void start(){
                 cout << word;
                 break;   
             }else{
-                table[coordY][coordX] = key;
-                word += key; 
+                table[coordY][coordX] = static_cast<char>(key);
+                word += static_cast<char>(key);
+                cout << "\033[2J\033[1;1H";
+                dashboardPrint(coordY, coordX);
             } 
         }
     }
@@ -191,10 +190,14 @@ void dashboard(){
     }
 }
 
-void dashboardPrint(){
+void dashboardPrint(int cursorY, int cursorX){
     for(int i = 0; i < 15; i++){
         for(int j = 0; j < 15; j++){
-           cout << " " << table[i][j] << " ";
+           if(i == cursorY && j == cursorX){
+               cout << " " << static_cast<char>(206) << " ";
+           } else {
+               cout << " " << table[i][j] << " ";
+           }
         }
         cout << "\n\n";
     }
