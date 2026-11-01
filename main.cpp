@@ -2,6 +2,9 @@
 #include <fstream> // EDICION DE ARCHIVOS
 #include <string>
 #include <conio.h>
+#include <cctype>
+#include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -24,7 +27,7 @@ void interactivePanel(int x);
 // IN-GAME FUNCTIONS
 void dashboard();
 void dashboardPrint(int cursorY, int cursorX);
-void wValidation(string word); 
+bool wValidation(string word, const vector<pair<int, int>>& letterPositions, bool& firstWord);
 
 int main() {
     string nickname1, nickname2;
@@ -88,6 +91,8 @@ void start(){
     const int KEY_RIGHT = 77;
 
     string word = ""; 
+    vector<pair<int, int>> letterPositions;
+    static bool firstWord = true;
 
     dashboard();
 
@@ -129,11 +134,17 @@ void start(){
             break;
         }else{
             if(key == 13){
-                cout << word;
-                break;   
+                for(char& c : word) {
+                    if (c >= 'A' && c <= 'Z') {
+                        c = static_cast<char>(c - 'A' + 'a');
+                    }
+                }
+                wValidation(word, letterPositions, firstWord);
+                break;
             }else{
                 table[coordY][coordX] = static_cast<char>(key);
                 word += static_cast<char>(key);
+                letterPositions.push_back({coordY, coordX});
                 cout << "\033[2J\033[1;1H";
                 dashboardPrint(coordY, coordX);
             } 
@@ -201,4 +212,181 @@ void dashboardPrint(int cursorY, int cursorX){
         }
         cout << "\n\n";
     }
+}
+
+bool wValidation(string word, const vector<pair<int, int>>& letterPositions, bool& firstWord){
+    string dictionary[520] = {
+        // A (0-19)
+        "avion", "avestruz", "animal", "agua", "abeja", "arbol", "anillo", "araña", "aguja", "ajo",
+        "amarillo", "amigo", "arte", "azucar", "auto", "ala", "aire", "arena", "actor", "abuela",
+        // B (20-39)
+        "basura", "barco", "beso", "bota", "ballena", "bosque", "botella", "boton", "brazo", "bruja",
+        "banco", "burro", "blanco", "bufanda", "balcon", "barril", "bebe", "bronce", "bicicleta", "bigote",
+        // C (40-59)
+        "casa", "cama", "carro", "cielo", "cinco", "color", "comida", "corazon", "caballo", "cabeza",
+        "cebolla", "cerdo", "cereza", "circo", "clavo", "conejo", "cueva", "cuchillo", "copa", "cable",
+        // D (60-79)
+        "dedo", "dado", "diente", "dia", "dulce", "dinosaurio", "delfin", "disco", "diamante", "duende",
+        "dragon", "ducha", "dinero", "diez", "dolor", "doctor", "dardo", "desierto", "dama", "domino",
+        // E (80-99)
+        "elefante", "estrella", "escoba", "espejo", "erizo", "enano", "escudo", "espada", "escuela", "escarabajo",
+        "escaleras", "espina", "estatua", "estufa", "eclipse", "edificio", "examen", "equipo", "error", "espacio",
+        // F (100-119)
+        "fuego", "flor", "fantasma", "faro", "fiesta", "flecha", "foca", "foto", "fruta", "fuente",
+        "fresa", "falda", "flauta", "foco", "familia", "fosforo", "frio", "frente", "fabrica", "farol",
+        // G (120-139)
+        "gato", "gallina", "globo", "gota", "guitarra", "gusano", "gorila", "galleta", "gigante", "girasol",
+        "goma", "genio", "golpe", "grasa", "guante", "gaviota", "grifo", "ganso", "gorra", "gemelo",
+        // H (140-159)
+        "hielo", "hoja", "hormiga", "hueso", "huevo", "hada", "helado", "hilo", "humo", "hacha",
+        "hamaca", "halcon", "harina", "hermano", "hospital", "hotel", "huella", "huerto", "hiena", "hipopotamo",
+        // I (160-179)
+        "isla", "iguana", "iman", "iglesia", "idea", "idioma", "insecto", "invierno", "imagen", "invento",
+        "igual", "idolo", "indio", "icono", "incendio", "incienso", "ilusion", "imperio", "instinto", "iris",
+        // J (180-199)
+        "jabon", "jarra", "jefe", "jirafa", "joya", "juego", "jugo", "juguete", "jabali", "jardin",
+        "jilguero", "jinete", "joven", "joyero", "judia", "jueves", "juez", "jungla", "junta", "justicia",
+        // K (200-219)
+        "koala", "kilo", "karate", "kayak", "kiwi", "karma", "kiosco", "kimono", "kermes", "ketchup",
+        "kilt", "kurdo", "koine", "kendo", "kart", "kefir", "krill", "kung-fu", "kaiser", "karma",
+        // L (220-239)
+        "luna", "lobo", "leon", "lago", "lana", "lapiz", "leche", "letra", "libro", "limon",
+        "llama", "llave", "lluvia", "loro", "luz", "labio", "lagarto", "lata", "lazo", "lente",
+        // M (240-259)
+        "mano", "mono", "mesa", "mapa", "manzana", "mariposa", "mosca", "musica", "madre", "mar",
+        "miel", "miedo", "milagro", "minuto", "moneda", "montaña", "motor", "mundo", "muñeca", "muro",
+        // N (260-279)
+        "nube", "nariz", "naranja", "niño", "noche", "nieve", "nido", "nota", "nuez", "nave",
+        "nombre", "norte", "nudo", "nueve", "numero", "nutria", "novia", "nuca", "noticia", "novela",
+        // O (280-299)
+        "ojo", "oreja", "oso", "oro", "ola", "oveja", "oceano", "ocho", "octubre", "oficina",
+        "oido", "olla", "olor", "ombligo", "opera", "orden", "organo", "oruga", "ostra", "otoño",
+        // P (300-319)
+        "perro", "pato", "pez", "piedra", "puerta", "pan", "papel", "parque", "pelota", "pelo",
+        "pera", "piano", "pie", "piel", "pintura", "piña", "planta", "plato", "playa", "puente",
+        // Q (320-339)
+        "queso", "quimica", "quince", "quinto", "queja", "quemadura", "querubin", "quijada", "quilla", "quimera",
+        "quiosco", "quirurgico", "quiste", "quita", "quorum", "quesadilla", "quehacer", "querencia", "quirofano", "quiebre",
+        // R (340-359)
+        "raton", "rana", "rama", "rey", "rio", "rosa", "rueda", "reloj", "radio", "raiz",
+        "racimo", "red", "regla", "reina", "risa", "roca", "ropa", "ruiseñor", "rubi", "ruido",
+        // S (360-379)
+        "sol", "sapo", "sal", "sangre", "santo", "silla", "sombrero", "sopa", "sueño", "suelo",
+        "sabado", "sabana", "sabor", "saco", "salida", "salto", "saludo", "semilla", "serpiente", "silencio",
+        // T (380-399)
+        "tigre", "taza", "tambor", "tapa", "taxi", "teatro", "techo", "tela", "telefono", "television",
+        "tenedor", "tiempo", "tienda", "tierra", "tijeras", "tiza", "toalla", "tomate", "torre", "tren",
+        // U (400-419)
+        "uva", "uña", "uno", "universo", "unicornio", "universidad", "urraca", "uso", "urna", "util",
+        "utopia", "urgente", "urbano", "unguento", "union", "unidad", "uniforme", "ultrasonido", "ultimatum", "umbral",
+        // V (420-439)
+        "vaca", "vaso", "vela", "viento", "vino", "violin", "ventana", "verano", "verde", "vestido",
+        "viaje", "vida", "vidrio", "viejo", "vagon", "volcan", "vuelo", "voz", "voto", "vuelta",
+        // W (440-459)
+        "waffle", "web", "wok", "wifi", "whisky", "walkman", "waterpolo", "wolframio", "wapiti", "webcam",
+        "windsurf", "wagneriano", "western", "watt", "wombat", "water", "wasabi", "wushu", "weber", "wincha",
+        // X (460-479)
+        "xilofono", "xenofobia", "xerocopia", "xilografia", "xilofago", "xenon", "xilema", "xilorgano", "xifoides", "xilogeno",
+        "xantoma", "xerofilo", "xilidina", "xeroftalmia", "xilol", "xilotila", "xantodermo", "xenobiotico", "xero", "xilofonista",
+        // Y (480-499)
+        "yate", "yegua", "yema", "yeso", "yunque", "yuca", "yogur", "yoga", "yodo", "yelmo",
+        "yeti", "yarda", "yak", "yacimiento", "yerno", "yute", "yuyo", "yo-yo", "yin", "yanqui",
+        // Z (500-519)
+        "zapato", "zorro", "zanahoria", "zoologico", "zancudo", "zafiro", "zanja", "zarza", "zepelin", "zeta",
+        "zigzag", "zinc", "zocalo", "zona", "zombi", "zumo", "zurdo", "zumbido", "zafarrancho", "zueco"
+    };
+    
+    if (word.empty()) {
+        cout << "La palabra no puede estar vacia.";
+        return false;
+    }
+
+    if (word.find(' ') != string::npos || word.find('\t') != string::npos) {
+        cout << "La palabra no puede tener espacios.";
+        return false;
+    }
+
+    if (letterPositions.size() != word.length()) {
+        cout << "La palabra no puede contener espacios ni posiciones vacias.";
+        return false;
+    }
+
+    bool horizontal = true;
+    bool vertical = true;
+
+    for (int i = 1; i < static_cast<int>(letterPositions.size()); i++) {
+        if (letterPositions[i].first != letterPositions[0].first) {
+            horizontal = false;
+        }
+        if (letterPositions[i].second != letterPositions[0].second) {
+            vertical = false;
+        }
+    }
+
+    for (int i = 0; i < static_cast<int>(letterPositions.size()); i++) {
+        for (int j = i + 1; j < static_cast<int>(letterPositions.size()); j++) {
+            if (letterPositions[i] == letterPositions[j]) {
+                cout << "La palabra no puede repetir una casilla.";
+                return false;
+            }
+        }
+    }
+
+    if (!horizontal && !vertical) {
+        cout << "La palabra no puede estar escrita en diagonal.";
+        return false;
+    }
+
+    vector<int> coordinates;
+    if (horizontal) {
+        for (const auto& position : letterPositions) {
+            coordinates.push_back(position.second);
+        }
+    } else {
+        for (const auto& position : letterPositions) {
+            coordinates.push_back(position.first);
+        }
+    }
+
+    sort(coordinates.begin(), coordinates.end());
+    for (int i = 1; i < static_cast<int>(coordinates.size()); i++) {
+        if (coordinates[i] != coordinates[i - 1] + 1) {
+            cout << "La palabra debe estar escrita en casillas consecutivas.";
+            return false;
+        }
+    }
+
+    if (firstWord) {
+        bool coversCenter = false;
+        for (const auto& position : letterPositions) {
+            if (position.first == 7 && position.second == 7) {
+                coversCenter = true;
+                break;
+            }
+        }
+
+        if (!coversCenter) {
+            cout << "La primera palabra debe pasar por la casilla [7][7].";
+            return false;
+        }
+    }
+  
+
+    bool encontrada = false;
+
+    for (int i = 0; i < 520; i++) {
+        if (word == dictionary[i]) {
+            encontrada = true;
+            break;
+        }
+    }
+
+    if (encontrada) {
+        cout << "PALABRA VALIDA, FELICIDADES";
+        firstWord = false;
+    } else {
+        cout << "PALABRA INVALIDA";
+    }
+
+    return encontrada;
 }
