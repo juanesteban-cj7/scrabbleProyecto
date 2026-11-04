@@ -10,6 +10,7 @@
 using namespace std;
 
 char table[15][15]; 
+unsigned char validTable[15][15];
 
 int turn = 1; 
 int pts1 = 0;
@@ -45,6 +46,8 @@ void interactivePanel(int x);
 void dashboard();
 void dashboardPrint(int cursorY, int cursorX);
 bool wValidation(string word, const vector<pair<int, int>>& letterPositions, bool& firstWord);
+bool wordCrossesValidBoard(const vector<pair<int, int>>& letterPositions);
+bool existingLetterMatchesWord(const string& word, const vector<pair<int, int>>& letterPositions);
 
 int main() {
     string nickname1, nickname2;
@@ -138,7 +141,8 @@ void start(){
 
     string word = ""; 
     vector<pair<int, int>> letterPositions;
-    static bool firstWord = true;
+    bool firstWord = true;
+    firstWord = true;
 
     dashboard();
 
@@ -186,7 +190,19 @@ void start(){
                         c = static_cast<char>(c - 'A' + 'a');
                     }
                 }
+                bool wasFirstWord = firstWord;
                 bool validPoint = wValidation(word, letterPositions, firstWord);
+
+                if (validPoint && !wasFirstWord) {
+                    if (!wordCrossesValidBoard(letterPositions)) {
+                        lastValidationMessage = "La palabra debe empezar o cruzarse con una palabra valida.";
+                        validPoint = false;
+                    } else if (!existingLetterMatchesWord(word, letterPositions)) {
+                        lastValidationMessage = "La letra nueva no coincide con una letra ya validada.";
+                        validPoint = false;
+                    }
+                }
+
                 if(validPoint){
                     if(turn == 1){
                         pts1++; // EL VALOR DEBE CAMBIAR ES SOLO UN EJEMPLO PARA TESTING... 
@@ -195,7 +211,18 @@ void start(){
                         pts2++; 
                         turn = 1;
                     }
-                } 
+                    for (const auto& position : letterPositions) {
+                        validTable[position.first][position.second] =
+                            table[position.first][position.second];
+                    }
+                } else {
+                    for (const auto& position : letterPositions) {
+                        table[position.first][position.second] =
+                            validTable[position.first][position.second] == 219
+                                ? 219
+                                : validTable[position.first][position.second];
+                    }
+                }
                 word = "";
                 letterPositions.clear();
                 cout << "\033[2J\033[1;1H";
@@ -259,6 +286,7 @@ void dashboard(){
     for(int i = 0; i < 15; i++){
         for(int j = 0; j < 15; j++){
            table[i][j] = 219;
+           validTable[i][j] = 219;
         }
     }
 }
@@ -281,6 +309,46 @@ void dashboardPrint(int cursorY, int cursorX){
         }
         cout << "\n\n";
     }
+}
+
+bool wordCrossesValidBoard(const vector<pair<int, int>>& letterPositions) {
+    for (const auto& position : letterPositions) {
+        int y = position.first;
+        int x = position.second;
+
+        if (validTable[y][x] != 219) {
+            return true;
+        }
+
+        const int dy[] = {-1, 1, 0, 0};
+        const int dx[] = {0, 0, -1, 1};
+        for (int i = 0; i < 4; i++) {
+            int adjacentY = y + dy[i];
+            int adjacentX = x + dx[i];
+            if (adjacentY >= 0 && adjacentY < 15 &&
+                adjacentX >= 0 && adjacentX < 15 &&
+                validTable[adjacentY][adjacentX] != 219) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool existingLetterMatchesWord(const string& word, const vector<pair<int, int>>& letterPositions) {
+    for (size_t i = 0; i < letterPositions.size(); i++) {
+        int y = letterPositions[i].first;
+        int x = letterPositions[i].second;
+        if (validTable[y][x] != 219) {
+            char candidate = static_cast<char>(tolower(static_cast<unsigned char>(table[y][x])));
+            char validated = static_cast<char>(tolower(static_cast<unsigned char>(validTable[y][x])));
+            char expected = static_cast<char>(tolower(static_cast<unsigned char>(word[i])));
+            if (candidate != validated || validated != expected) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 bool wValidation(string word, const vector<pair<int, int>>& letterPositions, bool& firstWord){
