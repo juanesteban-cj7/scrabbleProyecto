@@ -1,5 +1,5 @@
 #include <iostream>
-#include <fstream> // EDICION DE ARCHIVOS
+#include <fstream> 
 #include <string>
 #include <conio.h>
 #include <cctype>
@@ -9,7 +9,14 @@
 
 using namespace std;
 
-char table[15][15];
+char table[15][15]; 
+
+int turn = 1; 
+int pts1 = 0;
+int pts2 = 0; // Puntaje local
+string playerName1 = "Jugador 1";
+string playerName2 = "Jugador 2";
+string lastValidationMessage = "";
 
 string words[] = {"A", "E", "I", "L", "N", "O", "R", "S", "T", "U", "D", "G", "B", "C", "M", "P", "F", "H", "V", "Y", "CH", "Q", "J", "LL", "Ñ", "RR", "X", "Z"}; 
 int player1Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; 
@@ -74,6 +81,8 @@ void dataVerification(string& nickname1, string& nickname2){
         cout << "Bienvenidos, " << nickname1 << " y " << nickname2 << "\n";
     }
 
+    playerName1 = nickname1;
+    playerName2 = nickname2;
     userFile.close();
 }
 
@@ -171,14 +180,28 @@ void start(){
             break;
         }else{
             if(key == 13){
+                lastValidationMessage = "";
                 for(char& c : word) {
                     if (c >= 'A' && c <= 'Z') {
                         c = static_cast<char>(c - 'A' + 'a');
                     }
                 }
-                wValidation(word, letterPositions, firstWord);
-                break;
-            }else{
+                bool validPoint = wValidation(word, letterPositions, firstWord);
+                if(validPoint){
+                    if(turn == 1){
+                        pts1++; // EL VALOR DEBE CAMBIAR ES SOLO UN EJEMPLO PARA TESTING... 
+                        turn = 2; 
+                    }else{
+                        pts2++; 
+                        turn = 1;
+                    }
+                } 
+                word = "";
+                letterPositions.clear();
+                cout << "\033[2J\033[1;1H";
+                dashboardPrint(coordY, coordX);
+            }
+            else{
                 table[coordY][coordX] = static_cast<char>(key);
                 word += static_cast<char>(key);
                 letterPositions.push_back({coordY, coordX});
@@ -198,6 +221,8 @@ string changeName(){
     cin >> newNickname2;
 
     saveNickname(newNickname1, newNickname2);
+    playerName1 = newNickname1;
+    playerName2 = newNickname2;
 
     return newNickname1;
 }
@@ -239,6 +264,13 @@ void dashboard(){
 }
 
 void dashboardPrint(int cursorY, int cursorX){
+    cout << "Bienvenidos, " << playerName1 << " y " << playerName2 << "\n";
+    cout << "Turno: J" << turn << " | Puntos J1: " << pts1 << " | Puntos J2: " << pts2 << "\n";
+    if (!lastValidationMessage.empty()) {
+        cout << lastValidationMessage << "\n";
+    }
+    cout << "\n";
+
     for(int i = 0; i < 15; i++){
         for(int j = 0; j < 15; j++){
            if(i == cursorY && j == cursorX){
@@ -334,20 +366,17 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
     };
     
     if (word.empty()) {
-        cout << "La palabra no puede estar vacia.\n";
-        start(); 
+        lastValidationMessage = "La palabra no puede estar vacia.";
         return false;
     }
 
     if (word.find(' ') != string::npos || word.find('\t') != string::npos) {
-        cout << "La palabra no puede tener espacios.\n";
-        start(); 
+        lastValidationMessage = "La palabra no puede tener espacios.";
         return false;
     }
 
     if (letterPositions.size() != word.length()) {
-        cout << "La palabra no puede contener espacios ni posiciones vacias.\n";
-        start(); 
+        lastValidationMessage = "La palabra no puede contener espacios ni posiciones vacias.";
         return false;
     }
 
@@ -366,16 +395,14 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
     for (int i = 0; i < static_cast<int>(letterPositions.size()); i++) {
         for (int j = i + 1; j < static_cast<int>(letterPositions.size()); j++) {
             if (letterPositions[i] == letterPositions[j]) {
-                cout << "La palabra no puede repetir una casilla.\n";
-                start(); 
+                lastValidationMessage = "La palabra no puede repetir una casilla.";
                 return false;
             }
         }
     }
 
     if (!horizontal && !vertical) {
-        cout << "La palabra no puede estar escrita en diagonal.\n";
-        start(); 
+        lastValidationMessage = "La palabra no puede estar escrita en diagonal.";
         return false;
     }
 
@@ -393,8 +420,7 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
     sort(coordinates.begin(), coordinates.end());
     for (int i = 1; i < static_cast<int>(coordinates.size()); i++) {
         if (coordinates[i] != coordinates[i - 1] + 1) {
-            cout << "La palabra debe estar escrita en casillas consecutivas.\n";
-            start(); 
+            lastValidationMessage = "La palabra debe estar escrita en casillas consecutivas.";
             return false;
         }
     }
@@ -407,10 +433,8 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
                 break;
             }
         }
-
         if (!coversCenter) {
-            cout << "La primera palabra debe pasar por la casilla [7][7].\n";
-            start(); 
+            lastValidationMessage = "La primera palabra debe pasar por la casilla [7][7].";
             return false;
         }
     }
@@ -426,12 +450,10 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
     }
 
     if (encontrada) {
-        cout << "PALABRA VALIDA, FELICIDADES\n";
-        start(); 
+        lastValidationMessage = "PALABRA VALIDA, FELICIDADES";
         firstWord = false;
     } else {
-        cout << "PALABRA INVALIDA\n";
-        start(); 
+        lastValidationMessage = "PALABRA INVALIDA";
     }
 
     return encontrada;
