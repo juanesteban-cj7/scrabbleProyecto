@@ -5,6 +5,7 @@
 #include <cctype>
 #include <vector>
 #include <algorithm>
+#include <windows.h>
 
 using namespace std;
 
@@ -15,6 +16,15 @@ int player1Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2,
 int player2Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; 
 
 //MENU FUNCTIONS
+
+int terminalWidth() {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+        return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    }
+    return 80;
+}
+
 void saveNickname(const string& nickname1, const string& nickname2);
 void dataVerification(string& nickname1, string& nickname2);
 int menu();
@@ -70,14 +80,41 @@ void dataVerification(string& nickname1, string& nickname2){
 int menu() {
     int option;
 
-    cout << "----------------------------" << endl;
-    cout << "         ____                 " << endl;
-    cout << R"(|\   /| |     |\   | |    | )" << endl;
-    cout << R"(| \ / | |____ | \  | |    | )" << endl;
-    cout << R"(|     | |     |  \ | |    | )" << endl;
-    cout << R"(|     | |____ |   \| |____| )" << endl;
-    cout << "                            " << endl;
-    cout << "----------------------------" << endl;
+    const string letters[4][5] = {
+        {"10001", "11011", "10101", "10001", "10001"}, // M
+        {"11111", "10000", "11110", "10000", "11111"}, // E
+        {"10001", "11001", "10101", "10011", "10001"}, // N
+        {"10001", "10001", "10001", "10001", "01110"}  // U
+    };
+    const char symbols[4] = {'#', '@', '%', '&'};   // un simbolo por letra
+
+    const int width = terminalWidth() - 1;          // evita salto de linea extra
+    const int totalCols = 4 * 5 + 3;                // 4 letras + 3 espacios = 23
+    int rowRepeat = (width / totalCols) / 2;        // altura proporcional al ancho
+    if (rowRepeat < 1) rowRepeat = 1;
+
+    cout << string(width, '=') << "\n";
+
+    for (int row = 0; row < 5; row++) {
+        string line;
+        for (int x = 0; x < width; x++) {
+            int src = x * totalCols / width;        // columna original (0 a 22)
+            int letter = src / 6;                   // cada letra: 5 columnas + 1 espacio
+            int col = src % 6;
+
+            if (letter < 4 && col < 5 && letters[letter][row][col] == '1') {
+                line += symbols[letter];
+            } else {
+                line += ' ';
+            }
+        }
+        for (int r = 0; r < rowRepeat; r++) {
+            cout << line << "\n";
+        }
+    }
+
+    cout << string(width, '=') << "\n";
+
     cout << "Seleccione la opcion que desea\n- Iniciar Juego (1)\n- Cambiar nombre (2)\n- Mostrar Registro de resultados (3)\n- Salir del juego (4)\n = ";
     cin >> option;
     interactivePanel(option);
