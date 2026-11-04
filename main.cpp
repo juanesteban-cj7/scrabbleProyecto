@@ -297,17 +297,20 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
     };
     
     if (word.empty()) {
-        cout << "La palabra no puede estar vacia.";
+        cout << "La palabra no puede estar vacia.\n";
+        start(); 
         return false;
     }
 
     if (word.find(' ') != string::npos || word.find('\t') != string::npos) {
-        cout << "La palabra no puede tener espacios.";
+        cout << "La palabra no puede tener espacios.\n";
+        start(); 
         return false;
     }
 
     if (letterPositions.size() != word.length()) {
-        cout << "La palabra no puede contener espacios ni posiciones vacias.";
+        cout << "La palabra no puede contener espacios ni posiciones vacias.\n";
+        start(); 
         return false;
     }
 
@@ -326,14 +329,16 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
     for (int i = 0; i < static_cast<int>(letterPositions.size()); i++) {
         for (int j = i + 1; j < static_cast<int>(letterPositions.size()); j++) {
             if (letterPositions[i] == letterPositions[j]) {
-                cout << "La palabra no puede repetir una casilla.";
+                cout << "La palabra no puede repetir una casilla.\n";
+                start(); 
                 return false;
             }
         }
     }
 
     if (!horizontal && !vertical) {
-        cout << "La palabra no puede estar escrita en diagonal.";
+        cout << "La palabra no puede estar escrita en diagonal.\n";
+        start(); 
         return false;
     }
 
@@ -351,7 +356,8 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
     sort(coordinates.begin(), coordinates.end());
     for (int i = 1; i < static_cast<int>(coordinates.size()); i++) {
         if (coordinates[i] != coordinates[i - 1] + 1) {
-            cout << "La palabra debe estar escrita en casillas consecutivas.";
+            cout << "La palabra debe estar escrita en casillas consecutivas.\n";
+            start(); 
             return false;
         }
     }
@@ -366,7 +372,8 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
         }
 
         if (!coversCenter) {
-            cout << "La primera palabra debe pasar por la casilla [7][7].";
+            cout << "La primera palabra debe pasar por la casilla [7][7].\n";
+            start(); 
             return false;
         }
     }
@@ -382,10 +389,12 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
     }
 
     if (encontrada) {
-        cout << "PALABRA VALIDA, FELICIDADES";
+        cout << "PALABRA VALIDA, FELICIDADES\n";
+        start(); 
         firstWord = false;
     } else {
-        cout << "PALABRA INVALIDA";
+        cout << "PALABRA INVALIDA\n";
+        start(); 
     }
 
     return encontrada;
