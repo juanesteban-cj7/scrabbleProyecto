@@ -179,7 +179,7 @@ void start(){
             cout << "\033[2J\033[1;1H"; // Hace un clear en la terminal
             dashboardPrint(coordY, coordX);
         }
-        else if(key == 46){
+        else if(key == 46){ // Punto (.)
             cout << "Programa detenido.";
             break;
         }else{
@@ -216,6 +216,11 @@ void start(){
                             table[position.first][position.second];
                     }
                 } else {
+                    if(turn == 1){
+                        turn = 2; 
+                    }else{ 
+                        turn = 1;
+                    }
                     for (const auto& position : letterPositions) {
                         table[position.first][position.second] =
                             validTable[position.first][position.second] == 219
