@@ -20,9 +20,9 @@ string playerName2 = "Jugador 2";
 string lastValidationMessage = "";
 
 string words[] = {"A", "E", "I", "L", "N", "O", "R", "S", "T", "U", "D", "G", "B", "C", "M", "P", "F", "H", "V", "Y", "CH", "Q", "J", "LL", "Ñ", "RR", "X", "Z"}; 
+const int WORD_COUNT = sizeof(words) / sizeof(words[0]);
 int player1Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; 
 int player2Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; 
-const int WORD_COUNT = sizeof(words) / sizeof(words[0]);
 
 //MENU FUNCTIONS
 
@@ -742,6 +742,82 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
             lastValidationMessage = "La primera palabra debe pasar por la casilla [7][7].";
             return false;
         }
+    }
+
+    int availableLetterCantidad[WORD_COUNT];
+    for (int i = 0; i < WORD_COUNT; i++) {
+        availableLetterCantidad[i] = turn == 1 ? player1Cantidad[i] : player2Cantidad[i];
+    }
+
+    size_t wordIndex = 0;
+    size_t positionIndex = 0;
+    while (wordIndex < word.size()) {
+        size_t bytes = 1;
+        string letter;
+
+        if (isEnye(word, wordIndex, bytes)) {
+            letter = "Ñ";
+            if (positionIndex < letterPositions.size() &&
+                validTable[letterPositions[positionIndex].first][letterPositions[positionIndex].second] == 219) {
+                int letterIndex = findLetterIndex(letter);
+                if (letterIndex >= 0) {
+                    if (availableLetterCantidad[letterIndex] <= 0) {
+                        lastValidationMessage = "Ya no quedan fichas de la letra " + letter +
+                            (turn == 1 ? " para el Jugador 1." : " para el Jugador 2.");
+                        return false;
+                    }
+                    availableLetterCantidad[letterIndex]--;
+                }
+            }
+            wordIndex += bytes;
+            positionIndex++;
+            continue;
+        }
+
+        if (wordIndex + 1 < word.size() && positionIndex + 1 < letterPositions.size()) {
+            char first = static_cast<char>(toupper(static_cast<unsigned char>(word[wordIndex])));
+            char second = static_cast<char>(toupper(static_cast<unsigned char>(word[wordIndex + 1])));
+
+            if ((first == 'C' && second == 'H') ||
+                (first == 'L' && second == 'L') ||
+                (first == 'R' && second == 'R')) {
+                letter = string(1, first) + string(1, second);
+
+                if (validTable[letterPositions[positionIndex].first][letterPositions[positionIndex].second] == 219) {
+                    int letterIndex = findLetterIndex(letter);
+                    if (letterIndex >= 0) {
+                        if (availableLetterCantidad[letterIndex] <= 0) {
+                            lastValidationMessage = "Ya no quedan fichas de la letra " + letter +
+                                (turn == 1 ? " para el Jugador 1." : " para el Jugador 2.");
+                            return false;
+                        }
+                        availableLetterCantidad[letterIndex]--;
+                    }
+                }
+
+                wordIndex += 2;
+                positionIndex += 2;
+                continue;
+            }
+        }
+
+        if (positionIndex < letterPositions.size() &&
+            validTable[letterPositions[positionIndex].first][letterPositions[positionIndex].second] == 219) {
+            char current = static_cast<char>(toupper(static_cast<unsigned char>(word[wordIndex])));
+            int letterIndex = findLetterIndex(string(1, current));
+            if (letterIndex >= 0) {
+                if (availableLetterCantidad[letterIndex] <= 0) {
+                    string messageLetter(1, static_cast<char>(toupper(static_cast<unsigned char>(word[wordIndex]))));
+                    lastValidationMessage = "Ya no quedan fichas de la letra " + messageLetter +
+                        (turn == 1 ? " para el Jugador 1." : " para el Jugador 2.");
+                    return false;
+                }
+                availableLetterCantidad[letterIndex]--;
+            }
+        }
+
+        wordIndex++;
+        positionIndex++;
     }
   
 
