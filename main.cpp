@@ -22,6 +22,7 @@ string lastValidationMessage = "";
 string words[] = {"A", "E", "I", "L", "N", "O", "R", "S", "T", "U", "D", "G", "B", "C", "M", "P", "F", "H", "V", "Y", "CH", "Q", "J", "LL", "Ñ", "RR", "X", "Z"}; 
 int player1Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; 
 int player2Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; 
+const int WORD_COUNT = sizeof(words) / sizeof(words[0]);
 
 //MENU FUNCTIONS
 
@@ -48,6 +49,12 @@ void dashboardPrint(int cursorY, int cursorX);
 bool wValidation(string word, const vector<pair<int, int>>& letterPositions, bool& firstWord);
 bool wordCrossesValidBoard(const vector<pair<int, int>>& letterPositions);
 bool existingLetterMatchesWord(const string& word, const vector<pair<int, int>>& letterPositions);
+int singleLetterPoints(char letter);
+bool isEnye(const string& word, size_t i, size_t& bytes);
+int wordScore(const string& word, const vector<pair<int, int>>& letterPositions);
+bool hasNewLetter(const vector<pair<int, int>>& letterPositions);
+void subtractingLetters(const string& word, const vector<pair<int, int>>& letterPositions, int player);
+int findLetterIndex(const string& letter);
 
 int main() {
     string nickname1, nickname2;
@@ -200,17 +207,23 @@ void start(){
                     } else if (!existingLetterMatchesWord(word, letterPositions)) {
                         lastValidationMessage = "La letra nueva no coincide con una letra ya validada.";
                         validPoint = false;
+                    } else if (!hasNewLetter(letterPositions)) {
+                        lastValidationMessage = "La palabra debe incluir al menos una letra nueva.";
+                        validPoint = false;
                     }
                 }
 
                 if(validPoint){
+                    int earned = wordScore(word, letterPositions);
+                    subtractingLetters(word, letterPositions, turn);
                     if(turn == 1){
-                        pts1++; // EL VALOR DEBE CAMBIAR ES SOLO UN EJEMPLO PARA TESTING... 
+                        pts1 += earned;
                         turn = 2; 
                     }else{
-                        pts2++; 
+                        pts2 += earned;
                         turn = 1;
                     }
+                    lastValidationMessage += " (+" + to_string(earned) + " puntos)";
                     for (const auto& position : letterPositions) {
                         validTable[position.first][position.second] =
                             table[position.first][position.second];
@@ -283,7 +296,7 @@ switch(x){
             exit();
             break;
         default:
-            cout << "ESA OPCIÓN ES INVÁLIDA" << "(" << x << ")\n";
+            cout << "ESA OPCION ES INVALIDA" << "(" << x << ")\n";
     }
 }
 
@@ -304,6 +317,28 @@ void dashboardPrint(int cursorY, int cursorX){
     }
     cout << "\n";
 
+    vector<string> panelLines;
+    panelLines.push_back("FICHAS QUE QUEDAN");
+    panelLines.push_back(turn == 1 ? "Jugador 1: " + playerName1 : "Jugador 2: " + playerName2);
+    panelLines.push_back("--------------------------------");
+
+    const int groupStarts[] = {0, 10, 12, 16, 20, 22, 27};
+    const int groupEnds[] = {10, 12, 16, 20, 22, 27, 28};
+    const string groupPoints[] = {"1 punto", "2 puntos", "3 puntos",
+                                  "4 puntos", "5 puntos", "8 puntos", "10 puntos"};
+
+    for (int group = 0; group < 7; group++) {
+        string line = groupPoints[group] + ": ";
+        for (int i = groupStarts[group]; i < groupEnds[group]; i++) {
+            int remaining = turn == 1 ? player1Cantidad[i] : player2Cantidad[i];
+            line += words[i] + " x" + to_string(remaining);
+            if (i + 1 < groupEnds[group]) {
+                line += ", ";
+            }
+        }
+        panelLines.push_back(line);
+    }
+
     for(int i = 0; i < 15; i++){
         for(int j = 0; j < 15; j++){
            if(i == cursorY && j == cursorX){
@@ -312,8 +347,205 @@ void dashboardPrint(int cursorY, int cursorX){
                cout << " " << table[i][j] << " ";
            }
         }
+        if (i < static_cast<int>(panelLines.size())) {
+            cout << "   |   " << panelLines[i];
+        }
         cout << "\n\n";
     }
+}
+
+int findLetterIndex(const string& letter) {
+    string upperLetter = letter;
+    for (char& c : upperLetter) {
+        c = static_cast<char>(toupper(static_cast<unsigned char>(c)));
+    }
+
+    for (int i = 0; i < WORD_COUNT; i++) {
+        if (words[i] == upperLetter) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void subtractingLetters(const string& word, const vector<pair<int, int>>& letterPositions, int player) {
+    size_t wordIndex = 0;
+
+    while (wordIndex < word.size()) {
+        size_t bytes = 1;
+        string token;
+        int positionIndex = static_cast<int>(wordIndex);
+
+        if (isEnye(word, wordIndex, bytes)) {
+            token = "Ñ";
+            if (positionIndex < static_cast<int>(letterPositions.size())) {
+                const auto& position = letterPositions[positionIndex];
+                if (validTable[position.first][position.second] == 219) {
+                    int letterIndex = findLetterIndex(token);
+                    if (letterIndex >= 0 &&
+                        (player == 1 ? player1Cantidad[letterIndex]
+                                     : player2Cantidad[letterIndex]) > 0) {
+                        int& remaining = player == 1 ? player1Cantidad[letterIndex]
+                                                     : player2Cantidad[letterIndex];
+                        remaining--;
+                    }
+                }
+            }
+            wordIndex += bytes;
+            continue;
+        }
+
+        if (wordIndex + 1 < word.size() &&
+            positionIndex + 1 < static_cast<int>(letterPositions.size())) {
+            char first = static_cast<char>(toupper(static_cast<unsigned char>(word[wordIndex])));
+            char second = static_cast<char>(toupper(static_cast<unsigned char>(word[wordIndex + 1])));
+            if ((first == 'C' && second == 'H') ||
+                (first == 'L' && second == 'L') ||
+                (first == 'R' && second == 'R')) {
+                token = string(1, first) + string(1, second);
+
+                const auto& position = letterPositions[positionIndex];
+                if (validTable[position.first][position.second] == 219) {
+                    int letterIndex = findLetterIndex(token);
+                    if (letterIndex >= 0 &&
+                        (player == 1 ? player1Cantidad[letterIndex]
+                                     : player2Cantidad[letterIndex]) > 0) {
+                        int& remaining = player == 1 ? player1Cantidad[letterIndex]
+                                                     : player2Cantidad[letterIndex];
+                        remaining--;
+                    }
+                }
+                wordIndex += 2;
+                continue;
+            }
+        }
+
+        char current = static_cast<char>(toupper(static_cast<unsigned char>(word[wordIndex])));
+        if (positionIndex < static_cast<int>(letterPositions.size())) {
+            const auto& position = letterPositions[positionIndex];
+            if (validTable[position.first][position.second] == 219) {
+                int letterIndex = findLetterIndex(string(1, current));
+                if (letterIndex >= 0 &&
+                    (player == 1 ? player1Cantidad[letterIndex]
+                                 : player2Cantidad[letterIndex]) > 0) {
+                    int& remaining = player == 1 ? player1Cantidad[letterIndex]
+                                                 : player2Cantidad[letterIndex];
+                    remaining--;
+                }
+            }
+        }
+        wordIndex++;
+    }
+}
+
+int singleLetterPoints(char letter) {
+    switch (toupper(static_cast<unsigned char>(letter))) {
+        case 'A': case 'E': case 'I': case 'L': case 'N':
+        case 'O': case 'R': case 'S': case 'T': case 'U':
+            return 1;
+        case 'D': case 'G':
+            return 2;
+        case 'B': case 'C': case 'M': case 'P':
+            return 3;
+        case 'F': case 'H': case 'V': case 'Y':
+            return 4;
+        case 'Q':
+            return 5;
+        case 'J': case 'X':
+            return 8;
+        case 'Z':
+            return 10;
+        default:
+            return 0;
+    }
+}
+
+bool isEnye(const string& word, size_t i, size_t& bytes) {
+    unsigned char current = static_cast<unsigned char>(word[i]);
+
+    // UTF-8: Ñ = C3 91, ñ = C3 B1
+    if (current == 0xC3 && i + 1 < word.size()) {
+        unsigned char next = static_cast<unsigned char>(word[i + 1]);
+        if (next == 0x91 || next == 0xB1) {
+            bytes = 2;
+            return true;
+        }
+    }
+
+    // Codificaciones de un solo byte usadas por la consola (CP437/CP850/CP1252)
+    if (current == 0xA5 || current == 0xA4 || current == 0xD1 || current == 0xF1) {
+        bytes = 1;
+        return true;
+    }
+
+    return false;
+}
+
+bool hasNewLetter(const vector<pair<int, int>>& letterPositions) {
+    for (const auto& position : letterPositions) {
+        if (validTable[position.first][position.second] == 219) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int wordScore(const string& word, const vector<pair<int, int>>& letterPositions) {
+    int total = 0;
+    size_t i = 0;
+
+    while (i < word.size()) {
+        size_t bytes = 1;
+
+        if (isEnye(word, i, bytes)) {
+            bool anyNew = false;
+            for (size_t k = 0; k < bytes && i + k < letterPositions.size(); k++) {
+                if (validTable[letterPositions[i + k].first][letterPositions[i + k].second] == 219) {
+                    anyNew = true;
+                    break;
+                }
+            }
+            if (anyNew) {
+                total += 8;
+            }
+            i += bytes;
+            continue;
+        }
+
+        bool firstIsNew = i < letterPositions.size() &&
+            validTable[letterPositions[i].first][letterPositions[i].second] == 219;
+
+        char current = static_cast<char>(toupper(static_cast<unsigned char>(word[i])));
+
+        // Las letras dobles se validan en su primera letra.
+        if (firstIsNew && i + 1 < word.size()) {
+            char next = static_cast<char>(toupper(static_cast<unsigned char>(word[i + 1])));
+
+            if (current == 'C' && next == 'H') {
+                total += 5;
+                i += 2;
+                continue;
+            }
+            if (current == 'L' && next == 'L') {
+                total += 8;
+                i += 2;
+                continue;
+            }
+            if (current == 'R' && next == 'R') {
+                total += 8;
+                i += 2;
+                continue;
+            }
+        }
+
+        if (firstIsNew) {
+            total += singleLetterPoints(current);
+        }
+
+        i += 1;
+    }
+
+    return total;
 }
 
 bool wordCrossesValidBoard(const vector<pair<int, int>>& letterPositions) {
