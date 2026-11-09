@@ -15,6 +15,9 @@ unsigned char validTable[15][15];
 int turn = 1; 
 int pts1 = 0;
 int pts2 = 0; // Puntaje local
+int wins1 = 0;
+int wins2 = 0;
+
 string playerName1 = "Jugador 1";
 string playerName2 = "Jugador 2";
 string lastValidationMessage = "";
@@ -25,7 +28,6 @@ int player1Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2,
 int player2Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; 
 
 //MENU FUNCTIONS
-
 int terminalWidth() {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
@@ -33,7 +35,6 @@ int terminalWidth() {
     }
     return 80;
 }
-
 void saveNickname(const string& nickname1, const string& nickname2);
 void dataVerification(string& nickname1, string& nickname2);
 int menu();
@@ -56,6 +57,9 @@ bool hasNewLetter(const vector<pair<int, int>>& letterPositions);
 void subtractingLetters(const string& word, const vector<pair<int, int>>& letterPositions, int player);
 int findLetterIndex(const string& letter);
 
+// FINAL FUNCTIONS 
+void finalCout(); 
+
 int main() {
     string nickname1, nickname2;
     dataVerification(nickname1, nickname2);
@@ -68,6 +72,7 @@ void saveNickname(const string& nickname1, const string& nickname2){
 
     if(userFile.is_open()){
         userFile << nickname1 << '\n' << nickname2 << '\n';
+        userFile << wins1 << '\n' << wins2 << '\n';
         userFile.close();
     } else{
         cout << "No se pudo guardar el nickname \n";
@@ -78,6 +83,10 @@ void dataVerification(string& nickname1, string& nickname2){
     ifstream userFile("userdata.txt");
 
     if(userFile >> nickname1 && userFile >> nickname2) {
+        if(!(userFile >> wins1 >> wins2)){
+            wins1 = 0;
+            wins2 = 0;
+        }
         cout << "Bienvenidos nuevamente, " << nickname1 << " y " << nickname2 << "\n";
     } else{
         cout << "Primera vez que ejecutas el programa. \n";
@@ -187,9 +196,10 @@ void start(){
             dashboardPrint(coordY, coordX);
         }
         else if(key == 46){ // Punto (.)
-            cout << "Programa detenido.";
+            finalCout();
             break;
-        }else{
+        }
+        else{
             if(key == 13){
                 lastValidationMessage = "";
                 for(char& c : word) {
@@ -216,11 +226,28 @@ void start(){
                 if(validPoint){
                     int earned = wordScore(word, letterPositions);
                     subtractingLetters(word, letterPositions, turn);
+
                     if(turn == 1){
                         pts1 += earned;
-                        turn = 2; 
                     }else{
                         pts2 += earned;
+                    }
+
+                    int totalCardsUser1 = 0;
+                    int totalCardsUser2 = 0;
+                    for (int i = 0; i < WORD_COUNT; i++) {
+                        totalCardsUser1 += player1Cantidad[i];
+                        totalCardsUser2 += player2Cantidad[i];
+                    }
+
+                    if (totalCardsUser1 < 10 || totalCardsUser2 < 10) {
+                        finalCout();
+                        break;
+                    }
+
+                    if(turn == 1){
+                        turn = 2; 
+                    }else{
                         turn = 1;
                     }
                     lastValidationMessage += " (+" + to_string(earned) + " puntos)";
@@ -273,7 +300,7 @@ string changeName(){
 }
 
 void log(){ // FALTA HACER ESTA VAINA !!!!!
-    cout << "FUNCION EN DESARROLLO\n";
+    cout << "Wait";
 }
 
 void exit(){
@@ -281,7 +308,7 @@ void exit(){
 }
 
 void interactivePanel(int x){
-switch(x){
+    switch(x){
         case 1:
             start();
             break;
@@ -838,4 +865,45 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
     }
 
     return encontrada;
+}
+
+void finalCout(){
+    cout << "JUEGO FINALIZADO. RESUMEN DE PUNTOS: \n";
+    cout << playerName1 << ": " << pts1 << " puntos\n";
+    cout << playerName2 << ": " << pts2 << " puntos\n";
+
+    string storedName1, storedName2;
+    int storedWins1 = 0;
+    int storedWins2 = 0;
+
+    ifstream readFile("userdata.txt");
+    if(readFile >> storedName1 >> storedName2){
+        if(!(readFile >> storedWins1 >> storedWins2)){
+            storedWins1 = 0;
+            storedWins2 = 0;
+        }
+    }
+    readFile.close();
+
+    wins1 = storedWins1;
+    wins2 = storedWins2;
+
+    if(pts1 > pts2){
+        cout << "Felicidades " << playerName1 << " has ganado!!\n"; 
+        wins1++;
+    }else if(pts1 < pts2){
+        cout << "Felicidades " << playerName2 << " has ganado!!\n";  
+        wins2++;
+    }else{
+        cout << "El juego termino en empate.\n";
+    }
+
+    ofstream userFile("userdata.txt");
+    if(userFile.is_open()){
+        userFile << playerName1 << '\n' << playerName2 << '\n';
+        userFile << wins1 << '\n' << wins2 << '\n';
+        userFile.close();
+    }else{
+        cout << "No se pudo guardar el resultado.\n";
+    }
 }
