@@ -299,8 +299,35 @@ string changeName(){
     return newNickname1;
 }
 
-void log(){ // FALTA HACER ESTA VAINA !!!!!
-    cout << "Wait";
+void log(){
+    ifstream userFile("userdata.txt");
+
+    if(!userFile.is_open()){
+        cout << "No se pudo cargar los datos.\n";
+        getch();
+        menu();
+        return;
+    }
+
+    string name1, name2;
+    int victories1 = 0;
+    int victories2 = 0;
+
+    if(userFile >> name1 >> name2 >> victories1 >> victories2){
+        cout << "\033[2J\033[1;1H";
+        cout << endl;
+        cout << "VICTORIAS DE LOS JUGADORES\n";
+        cout << name1 << ": " << victories1 << " victorias\n";
+        cout << name2 << ": " << victories2 << " victorias\n";
+        cout << endl;
+        cout << "(Presiona cualquier tecla para volver al menu)\n";
+    }else{
+        cout << "No se pudieron leer las victorias.\n";
+    }
+
+    userFile.close();
+    getch();
+    menu();
 }
 
 void exit(){
