@@ -393,7 +393,22 @@ void dashboardPrint(int cursorY, int cursorX){
         panelLines.push_back(line);
     }
 
+    cout << "   ";
+    for (int j = 0; j < 15; j++) {
+        int columnNumber = j;
+        if (columnNumber < 10) {
+            cout << " ";
+        }
+        cout << columnNumber << " ";
+    }
+    cout << "\n";
+
     for(int i = 0; i < 15; i++){
+        int rowNumber = i;
+        if (rowNumber < 10) {
+            cout << " ";
+        }
+        cout << rowNumber << " ";
         for(int j = 0; j < 15; j++){
            if(i == cursorY && j == cursorX){
                cout << " " << static_cast<char>(206) << " ";
