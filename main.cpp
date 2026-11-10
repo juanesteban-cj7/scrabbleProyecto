@@ -1,18 +1,17 @@
 #include <iostream>
-#include <fstream> 
+#include <fstream>
 #include <string>
 #include <conio.h>
 #include <cctype>
 #include <vector>
-#include <algorithm>
 #include <windows.h>
 
 using namespace std;
 
-char table[15][15]; 
+char table[15][15];
 unsigned char validTable[15][15];
 
-int turn = 1; 
+int turn = 1;
 int pts1 = 0;
 int pts2 = 0; // Puntaje local
 int wins1 = 0;
@@ -22,21 +21,22 @@ string playerName1 = "Jugador 1";
 string playerName2 = "Jugador 2";
 string lastValidationMessage = "";
 
-string words[] = {"A", "E", "I", "L", "N", "O", "R", "S", "T", "U", "D", "G", "B", "C", "M", "P", "F", "H", "V", "Y", "CH", "Q", "J", "LL", "Ñ", "RR", "X", "Z"}; 
+string words[] = {"A", "E", "I", "L", "N", "O", "R", "S", "T", "U", "D", "G", "B", "C", "M", "P", "F", "H", "V", "Y", "CH", "Q", "J", "LL", "Ñ", "RR", "X", "Z"};
 const int WORD_COUNT = sizeof(words) / sizeof(words[0]);
-int player1Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; 
-int player2Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; 
+int player1Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+int player2Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
 //MENU FUNCTIONS
 int terminalWidth() {
+    // la API de Windows exige pasar la direccion de la estructura.
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
         return csbi.srWindow.Right - csbi.srWindow.Left + 1;
     }
     return 80;
 }
-void saveNickname(const string& nickname1, const string& nickname2);
-void dataVerification(string& nickname1, string& nickname2);
+void saveNickname(string nickname1, string nickname2);
+void dataVerification();
 int menu();
 void start();
 string changeName();
@@ -47,27 +47,28 @@ void interactivePanel(int x);
 // IN-GAME FUNCTIONS
 void dashboard();
 void dashboardPrint(int cursorY, int cursorX);
-bool wValidation(string word, const vector<pair<int, int>>& letterPositions, bool& firstWord);
-bool wordCrossesValidBoard(const vector<pair<int, int>>& letterPositions);
-bool existingLetterMatchesWord(const string& word, const vector<pair<int, int>>& letterPositions);
+bool wValidation(string word, vector<pair<int, int>> letterPositions, bool firstWord);
+bool wordCrossesValidBoard(vector<pair<int, int>> letterPositions);
+bool existingLetterMatchesWord(string word, vector<pair<int, int>> letterPositions);
 int singleLetterPoints(char letter);
-bool isEnye(const string& word, size_t i, size_t& bytes);
-int wordScore(const string& word, const vector<pair<int, int>>& letterPositions);
-bool hasNewLetter(const vector<pair<int, int>>& letterPositions);
-void subtractingLetters(const string& word, const vector<pair<int, int>>& letterPositions, int player);
-int findLetterIndex(const string& letter);
+size_t bytesEnye(string word, size_t i);
+void consumeTile(int player, int letterIndex);
+vector<int> sortedCoordinates(vector<int> values);
+int wordScore(string word, vector<pair<int, int>> letterPositions);
+bool hasNewLetter(vector<pair<int, int>> letterPositions);
+void subtractingLetters(string word, vector<pair<int, int>> letterPositions, int player);
+int findLetterIndex(string letter);
 
-// FINAL FUNCTIONS 
-void finalCout(); 
+// FINAL FUNCTIONS
+void finalCout();
 
 int main() {
-    string nickname1, nickname2;
-    dataVerification(nickname1, nickname2);
+    dataVerification();
 	menu();
 	return 0;
 }
 
-void saveNickname(const string& nickname1, const string& nickname2){
+void saveNickname(string nickname1, string nickname2){
     ofstream userFile("userdata.txt");
 
     if(userFile.is_open()){
@@ -79,7 +80,8 @@ void saveNickname(const string& nickname1, const string& nickname2){
     }
 }
 
-void dataVerification(string& nickname1, string& nickname2){
+void dataVerification(){
+    string nickname1, nickname2;
     ifstream userFile("userdata.txt");
 
     if(userFile >> nickname1 && userFile >> nickname2) {
@@ -155,7 +157,7 @@ void start(){
     const int KEY_LEFT = 75;
     const int KEY_RIGHT = 77;
 
-    string word = ""; 
+    string word = "";
     vector<pair<int, int>> letterPositions;
     bool firstWord = true;
     firstWord = true;
@@ -188,7 +190,7 @@ void start(){
                     newX++;
                     break;
             }
-            if(newY >= 0 && newY < 15 && newX >= 0 && newX < 15){ 
+            if(newY >= 0 && newY < 15 && newX >= 0 && newX < 15){
                 coordY = newY;
                 coordX = newX;
             }
@@ -202,13 +204,16 @@ void start(){
         else{
             if(key == 13){
                 lastValidationMessage = "";
-                for(char& c : word) {
-                    if (c >= 'A' && c <= 'Z') {
-                        c = static_cast<char>(c - 'A' + 'a');
+                for(size_t i = 0; i < word.size(); i++) {
+                    if (word[i] >= 'A' && word[i] <= 'Z') {
+                        word[i] = static_cast<char>(word[i] - 'A' + 'a');
                     }
                 }
                 bool wasFirstWord = firstWord;
                 bool validPoint = wValidation(word, letterPositions, firstWord);
+                if (validPoint) {
+                    firstWord = false; 
+                }
 
                 if (validPoint && !wasFirstWord) {
                     if (!wordCrossesValidBoard(letterPositions)) {
@@ -246,26 +251,26 @@ void start(){
                     }
 
                     if(turn == 1){
-                        turn = 2; 
+                        turn = 2;
                     }else{
                         turn = 1;
                     }
                     lastValidationMessage += " (+" + to_string(earned) + " puntos)";
-                    for (const auto& position : letterPositions) {
-                        validTable[position.first][position.second] =
-                            table[position.first][position.second];
+                    for (size_t i = 0; i < letterPositions.size(); i++) {
+                        validTable[letterPositions[i].first][letterPositions[i].second] =
+                            table[letterPositions[i].first][letterPositions[i].second];
                     }
                 } else {
                     if(turn == 1){
-                        turn = 2; 
-                    }else{ 
+                        turn = 2;
+                    }else{
                         turn = 1;
                     }
-                    for (const auto& position : letterPositions) {
-                        table[position.first][position.second] =
-                            validTable[position.first][position.second] == 219
+                    for (size_t i = 0; i < letterPositions.size(); i++) {
+                        table[letterPositions[i].first][letterPositions[i].second] =
+                            validTable[letterPositions[i].first][letterPositions[i].second] == 219
                                 ? 219
-                                : validTable[position.first][position.second];
+                                : validTable[letterPositions[i].first][letterPositions[i].second];
                     }
                 }
                 word = "";
@@ -279,7 +284,7 @@ void start(){
                 letterPositions.push_back({coordY, coordX});
                 cout << "\033[2J\033[1;1H";
                 dashboardPrint(coordY, coordX);
-            } 
+            }
         }
     }
 
@@ -365,7 +370,7 @@ void dashboard(){
 
 void dashboardPrint(int cursorY, int cursorX){
     cout << "Bienvenidos, " << playerName1 << " y " << playerName2 << "\n";
-    cout << "Turno: J" << turn << " | Puntos J1: " << pts1 << " | Puntos J2: " << pts2 << "\n";
+    cout << "Turno: J" << turn << " | Puntos J1: " << pts1 << " | Puntos J2: " << pts2 << " ";
     if (!lastValidationMessage.empty()) {
         cout << lastValidationMessage << "\n";
     }
@@ -423,10 +428,10 @@ void dashboardPrint(int cursorY, int cursorX){
     }
 }
 
-int findLetterIndex(const string& letter) {
+int findLetterIndex(string letter) {
     string upperLetter = letter;
-    for (char& c : upperLetter) {
-        c = static_cast<char>(toupper(static_cast<unsigned char>(c)));
+    for (size_t i = 0; i < upperLetter.size(); i++) {
+        upperLetter[i] = static_cast<char>(toupper(static_cast<unsigned char>(upperLetter[i])));
     }
 
     for (int i = 0; i < WORD_COUNT; i++) {
@@ -437,27 +442,36 @@ int findLetterIndex(const string& letter) {
     return -1;
 }
 
-void subtractingLetters(const string& word, const vector<pair<int, int>>& letterPositions, int player) {
+// Descuenta una ficha del jugador indicado (antes se hacia con una referencia "int& remaining").
+void consumeTile(int player, int letterIndex) {
+    if (letterIndex >= 0) {
+        if (player == 1) {
+            if (player1Cantidad[letterIndex] > 0) {
+                player1Cantidad[letterIndex]--;
+            }
+        } else {
+            if (player2Cantidad[letterIndex] > 0) {
+                player2Cantidad[letterIndex]--;
+            }
+        }
+    }
+}
+
+void subtractingLetters(string word, vector<pair<int, int>> letterPositions, int player) {
     size_t wordIndex = 0;
 
     while (wordIndex < word.size()) {
-        size_t bytes = 1;
+        size_t bytes = bytesEnye(word, wordIndex);
         string token;
         int positionIndex = static_cast<int>(wordIndex);
 
-        if (isEnye(word, wordIndex, bytes)) {
+        if (bytes > 0) {
             token = "Ñ";
             if (positionIndex < static_cast<int>(letterPositions.size())) {
-                const auto& position = letterPositions[positionIndex];
+                pair<int, int> position = letterPositions[positionIndex];
                 if (validTable[position.first][position.second] == 219) {
                     int letterIndex = findLetterIndex(token);
-                    if (letterIndex >= 0 &&
-                        (player == 1 ? player1Cantidad[letterIndex]
-                                     : player2Cantidad[letterIndex]) > 0) {
-                        int& remaining = player == 1 ? player1Cantidad[letterIndex]
-                                                     : player2Cantidad[letterIndex];
-                        remaining--;
-                    }
+                    consumeTile(player, letterIndex);
                 }
             }
             wordIndex += bytes;
@@ -473,16 +487,10 @@ void subtractingLetters(const string& word, const vector<pair<int, int>>& letter
                 (first == 'R' && second == 'R')) {
                 token = string(1, first) + string(1, second);
 
-                const auto& position = letterPositions[positionIndex];
+                pair<int, int> position = letterPositions[positionIndex];
                 if (validTable[position.first][position.second] == 219) {
                     int letterIndex = findLetterIndex(token);
-                    if (letterIndex >= 0 &&
-                        (player == 1 ? player1Cantidad[letterIndex]
-                                     : player2Cantidad[letterIndex]) > 0) {
-                        int& remaining = player == 1 ? player1Cantidad[letterIndex]
-                                                     : player2Cantidad[letterIndex];
-                        remaining--;
-                    }
+                    consumeTile(player, letterIndex);
                 }
                 wordIndex += 2;
                 continue;
@@ -491,16 +499,10 @@ void subtractingLetters(const string& word, const vector<pair<int, int>>& letter
 
         char current = static_cast<char>(toupper(static_cast<unsigned char>(word[wordIndex])));
         if (positionIndex < static_cast<int>(letterPositions.size())) {
-            const auto& position = letterPositions[positionIndex];
+            pair<int, int> position = letterPositions[positionIndex];
             if (validTable[position.first][position.second] == 219) {
                 int letterIndex = findLetterIndex(string(1, current));
-                if (letterIndex >= 0 &&
-                    (player == 1 ? player1Cantidad[letterIndex]
-                                 : player2Cantidad[letterIndex]) > 0) {
-                    int& remaining = player == 1 ? player1Cantidad[letterIndex]
-                                                 : player2Cantidad[letterIndex];
-                    remaining--;
-                }
+                consumeTile(player, letterIndex);
             }
         }
         wordIndex++;
@@ -529,29 +531,44 @@ int singleLetterPoints(char letter) {
     }
 }
 
-bool isEnye(const string& word, size_t i, size_t& bytes) {
+// Devuelve cuantos bytes ocupa la Ñ en la posicion i (2 en UTF-8, 1 en una sola codificacion)
+// o 0 si en esa posicion no hay una Ñ. (Antes: bool isEnye(..., size_t& bytes))
+size_t bytesEnye(string word, size_t i) {
     unsigned char current = static_cast<unsigned char>(word[i]);
 
     // UTF-8: Ñ = C3 91, ñ = C3 B1
     if (current == 0xC3 && i + 1 < word.size()) {
         unsigned char next = static_cast<unsigned char>(word[i + 1]);
         if (next == 0x91 || next == 0xB1) {
-            bytes = 2;
-            return true;
+            return 2;
         }
     }
 
     // Codificaciones de un solo byte usadas por la consola (CP437/CP850/CP1252)
     if (current == 0xA5 || current == 0xA4 || current == 0xD1 || current == 0xF1) {
-        bytes = 1;
-        return true;
+        return 1;
     }
 
-    return false;
+    return 0;
 }
 
-bool hasNewLetter(const vector<pair<int, int>>& letterPositions) {
-    for (const auto& position : letterPositions) {
+// Ordena los valores de menor a mayor).
+vector<int> sortedCoordinates(vector<int> values) {
+    for (size_t i = 1; i < values.size(); i++) {
+        int current = values[i];
+        int j = static_cast<int>(i) - 1;
+        while (j >= 0 && values[j] > current) {
+            values[j + 1] = values[j];
+            j--;
+        }
+        values[j + 1] = current;
+    }
+    return values;
+}
+
+bool hasNewLetter(vector<pair<int, int>> letterPositions) {
+    for (size_t i = 0; i < letterPositions.size(); i++) {
+        pair<int, int> position = letterPositions[i];
         if (validTable[position.first][position.second] == 219) {
             return true;
         }
@@ -559,14 +576,14 @@ bool hasNewLetter(const vector<pair<int, int>>& letterPositions) {
     return false;
 }
 
-int wordScore(const string& word, const vector<pair<int, int>>& letterPositions) {
+int wordScore(string word, vector<pair<int, int>> letterPositions) {
     int total = 0;
     size_t i = 0;
 
     while (i < word.size()) {
-        size_t bytes = 1;
+        size_t bytes = bytesEnye(word, i);
 
-        if (isEnye(word, i, bytes)) {
+        if (bytes > 0) {
             bool anyNew = false;
             for (size_t k = 0; k < bytes && i + k < letterPositions.size(); k++) {
                 if (validTable[letterPositions[i + k].first][letterPositions[i + k].second] == 219) {
@@ -617,10 +634,10 @@ int wordScore(const string& word, const vector<pair<int, int>>& letterPositions)
     return total;
 }
 
-bool wordCrossesValidBoard(const vector<pair<int, int>>& letterPositions) {
-    for (const auto& position : letterPositions) {
-        int y = position.first;
-        int x = position.second;
+bool wordCrossesValidBoard(vector<pair<int, int>> letterPositions) {
+    for (size_t p = 0; p < letterPositions.size(); p++) {
+        int y = letterPositions[p].first;
+        int x = letterPositions[p].second;
 
         if (validTable[y][x] != 219) {
             return true;
@@ -641,7 +658,7 @@ bool wordCrossesValidBoard(const vector<pair<int, int>>& letterPositions) {
     return false;
 }
 
-bool existingLetterMatchesWord(const string& word, const vector<pair<int, int>>& letterPositions) {
+bool existingLetterMatchesWord(string word, vector<pair<int, int>> letterPositions) {
     for (size_t i = 0; i < letterPositions.size(); i++) {
         int y = letterPositions[i].first;
         int x = letterPositions[i].second;
@@ -657,9 +674,14 @@ bool existingLetterMatchesWord(const string& word, const vector<pair<int, int>>&
     return true;
 }
 
-bool wValidation(string word, const vector<pair<int, int>>& letterPositions, bool& firstWord){    
+bool wValidation(string word, vector<pair<int, int>> letterPositions, bool firstWord){
     if (word.empty()) {
         lastValidationMessage = "La palabra no puede estar vacia.";
+        return false;
+    }
+
+    if (word.size() == 1 || bytesEnye(word, 0) == word.size()) {
+        lastValidationMessage = "Las palabras de una sola letra no son validas.";
         return false;
     }
 
@@ -701,16 +723,16 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
 
     vector<int> coordinates;
     if (horizontal) {
-        for (const auto& position : letterPositions) {
-            coordinates.push_back(position.second);
+        for (size_t i = 0; i < letterPositions.size(); i++) {
+            coordinates.push_back(letterPositions[i].second);
         }
     } else {
-        for (const auto& position : letterPositions) {
-            coordinates.push_back(position.first);
+        for (size_t i = 0; i < letterPositions.size(); i++) {
+            coordinates.push_back(letterPositions[i].first);
         }
     }
 
-    sort(coordinates.begin(), coordinates.end());
+    coordinates = sortedCoordinates(coordinates);
     for (int i = 1; i < static_cast<int>(coordinates.size()); i++) {
         if (coordinates[i] != coordinates[i - 1] + 1) {
             lastValidationMessage = "La palabra debe estar escrita en casillas consecutivas.";
@@ -720,8 +742,8 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
 
     if (firstWord) {
         bool coversCenter = false;
-        for (const auto& position : letterPositions) {
-            if (position.first == 7 && position.second == 7) {
+        for (size_t i = 0; i < letterPositions.size(); i++) {
+            if (letterPositions[i].first == 7 && letterPositions[i].second == 7) {
                 coversCenter = true;
                 break;
             }
@@ -740,10 +762,10 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
     size_t wordIndex = 0;
     size_t positionIndex = 0;
     while (wordIndex < word.size()) {
-        size_t bytes = 1;
+        size_t bytes = bytesEnye(word, wordIndex);
         string letter;
 
-        if (isEnye(word, wordIndex, bytes)) {
+        if (bytes > 0) {
             letter = "Ñ";
             if (positionIndex < letterPositions.size() &&
                 validTable[letterPositions[positionIndex].first][letterPositions[positionIndex].second] == 219) {
@@ -807,7 +829,7 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
         wordIndex++;
         positionIndex++;
     }
-  
+
 
     char confirmation = ' ';
     cout << "Palabra: " << word << " ¿Desea aceptar esta palabra? y/n: ";
@@ -824,7 +846,6 @@ bool wValidation(string word, const vector<pair<int, int>>& letterPositions, boo
 
     if (confirmation == 'y') {
         lastValidationMessage = "PALABRA VALIDA, FELICIDADES";
-        firstWord = false;
         return true;
     } else {
         lastValidationMessage = "PALABRA INVALIDA";
@@ -854,10 +875,10 @@ void finalCout(){
     wins2 = storedWins2;
 
     if(pts1 > pts2){
-        cout << "Felicidades " << playerName1 << " has ganado!!\n"; 
+        cout << "Felicidades " << playerName1 << " has ganado!!\n";
         wins1++;
     }else if(pts1 < pts2){
-        cout << "Felicidades " << playerName2 << " has ganado!!\n";  
+        cout << "Felicidades " << playerName2 << " has ganado!!\n";
         wins2++;
     }else{
         cout << "El juego termino en empate.\n";
