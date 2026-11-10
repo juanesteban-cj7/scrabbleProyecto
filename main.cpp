@@ -3,6 +3,8 @@
 #include <string>
 #include <conio.h>
 #include <cctype>
+#include <cstdlib>
+#include <chrono>
 #include <vector>
 #include <windows.h>
 
@@ -14,17 +16,29 @@ unsigned char validTable[15][15];
 int turn = 1;
 int pts1 = 0;
 int pts2 = 0; // Puntaje local
-int wins1 = 0;
-int wins2 = 0;
 
 string playerName1 = "Jugador 1";
 string playerName2 = "Jugador 2";
 string lastValidationMessage = "";
 
+struct UserRecord {
+    string nickname;
+    int wins;
+};
+
+vector<UserRecord> userRecords;
+const string USER_DATA_FILE = "userdata.txt";
+const string USER_DATA_VERSION = "SCRABBLE_USERS_V1";
+
 string words[] = {"A", "E", "I", "L", "N", "O", "R", "S", "T", "U", "D", "G", "B", "C", "M", "P", "F", "H", "V", "Y", "CH", "Q", "J", "LL", "Ñ", "RR", "X", "Z"};
 const int WORD_COUNT = sizeof(words) / sizeof(words[0]);
 int player1Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 int player2Cantidad[] = {12, 12, 6, 4, 5, 9, 5, 6, 4, 5, 5, 2, 2, 4, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+
+// PORTAFICHAS: cada posicion guarda el indice de una letra de "words" (o -1 si esta vacia)
+const int BAG_SIZE = 7;
+int player1Bag[BAG_SIZE];
+int player2Bag[BAG_SIZE];
 
 //MENU FUNCTIONS
 int terminalWidth() {
@@ -35,8 +49,12 @@ int terminalWidth() {
     }
     return 80;
 }
-void saveNickname(string nickname1, string nickname2);
-void dataVerification();
+int findUserRecord(const string& nickname);
+void ensureUserRecord(const string& nickname);
+bool saveUserData();
+bool loadUserData(string& nickname1, string& nickname2);
+bool saveNickname(const string& nickname1, const string& nickname2);
+bool dataVerification();
 int menu();
 void start();
 string changeName();
@@ -45,6 +63,8 @@ void exit();
 void interactivePanel(int x);
 
 // IN-GAME FUNCTIONS
+void createBag(int player);
+string bagLine(int player);
 void dashboard();
 void dashboardPrint(int cursorY, int cursorX);
 bool wValidation(string word, vector<pair<int, int>> letterPositions, bool firstWord);
@@ -63,48 +83,160 @@ int findLetterIndex(string letter);
 void finalCout();
 
 int main() {
-    dataVerification();
+    srand(static_cast<unsigned int>(chrono::system_clock::now().time_since_epoch().count()));
+    if (!dataVerification()) {
+        return 1;
+    }
 	menu();
 	return 0;
 }
 
-void saveNickname(string nickname1, string nickname2){
-    ofstream userFile("userdata.txt");
+int findUserRecord(const string& nickname) {
+    for (size_t i = 0; i < userRecords.size(); i++) {
+        if (userRecords[i].nickname == nickname) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
 
-    if(userFile.is_open()){
-        userFile << nickname1 << '\n' << nickname2 << '\n';
-        userFile << wins1 << '\n' << wins2 << '\n';
-        userFile.close();
-    } else{
-        cout << "No se pudo guardar el nickname \n";
+void ensureUserRecord(const string& nickname) {
+    if (findUserRecord(nickname) < 0) {
+        UserRecord record;
+        record.nickname = nickname;
+        record.wins = 0;
+        userRecords.push_back(record);
     }
 }
 
-void dataVerification(){
-    string nickname1, nickname2;
-    ifstream userFile("userdata.txt");
+bool saveUserData() {
+    const string temporaryFile = USER_DATA_FILE + ".tmp";
+    ofstream userFile(temporaryFile.c_str());
+    if (!userFile.is_open()) {
+        return false;
+    }
 
-    if(userFile >> nickname1 && userFile >> nickname2) {
-        if(!(userFile >> wins1 >> wins2)){
-            wins1 = 0;
-            wins2 = 0;
+    userFile << USER_DATA_VERSION << '\n';
+    userFile << playerName1 << '\n' << playerName2 << '\n';
+    userFile << userRecords.size() << '\n';
+    for (size_t i = 0; i < userRecords.size(); i++) {
+        userFile << userRecords[i].nickname << ' ' << userRecords[i].wins << '\n';
+    }
+    userFile.close();
+    if (userFile.fail()) {
+        return false;
+    }
+    return MoveFileExA(temporaryFile.c_str(), USER_DATA_FILE.c_str(),
+                       MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+}
+
+bool loadUserData(string& nickname1, string& nickname2) {
+    ifstream userFile(USER_DATA_FILE.c_str());
+    string firstValue;
+    if (!(userFile >> firstValue)) {
+        return false;
+    }
+
+    if (firstValue == USER_DATA_VERSION) {
+        size_t recordCount;
+        if (!(userFile >> nickname1 >> nickname2 >> recordCount) || recordCount > 100000) {
+            return false;
         }
-        cout << "Bienvenidos nuevamente, " << nickname1 << " y " << nickname2 << "\n";
-    } else{
-        cout << "Primera vez que ejecutas el programa. \n";
-        cout << "Ingresa tu nickname (User 1): ";
-        cin >> nickname1;
-        cout << "Ingresa tu nickname (User 2): ";
-        cin >> nickname2;
 
-        saveNickname(nickname1, nickname2);
+        for (size_t i = 0; i < recordCount; i++) {
+            string nickname;
+            int wins;
+            if (!(userFile >> nickname >> wins) || wins < 0) {
+                return false;
+            }
+            int index = findUserRecord(nickname);
+            if (index < 0) {
+                ensureUserRecord(nickname);
+                index = findUserRecord(nickname);
+            }
+            userRecords[index].wins += wins;
+        }
+    } else {
+        nickname1 = firstValue;
+        int legacyWins1 = 0;
+        int legacyWins2 = 0;
+        if (!(userFile >> nickname2)) {
+            return false;
+        }
+        if (!(userFile >> legacyWins1)) {
+            legacyWins1 = 0;
+            userFile.clear();
+        } else if (!(userFile >> legacyWins2)) {
+            legacyWins2 = 0;
+        }
+        if (legacyWins1 < 0 || legacyWins2 < 0) {
+            return false;
+        }
 
-        cout << "Bienvenidos, " << nickname1 << " y " << nickname2 << "\n";
+        ensureUserRecord(nickname1);
+        ensureUserRecord(nickname2);
+        int firstIndex = findUserRecord(nickname1);
+        int secondIndex = findUserRecord(nickname2);
+        userRecords[firstIndex].wins += legacyWins1;
+        userRecords[secondIndex].wins += legacyWins2;
     }
 
     playerName1 = nickname1;
     playerName2 = nickname2;
     userFile.close();
+    ensureUserRecord(playerName1);
+    ensureUserRecord(playerName2);
+
+    if (!saveUserData()) {
+        cout << "No se pudo guardar userdata.txt.\n";
+        return false;
+    }
+    return true;
+}
+
+bool saveNickname(const string& nickname1, const string& nickname2) {
+    ensureUserRecord(nickname1);
+    ensureUserRecord(nickname2);
+    playerName1 = nickname1;
+    playerName2 = nickname2;
+    return saveUserData();
+}
+
+bool dataVerification(){
+    string nickname1, nickname2;
+    ifstream userFile(USER_DATA_FILE.c_str());
+
+    if (userFile.is_open()) {
+        userFile.close();
+        if (!loadUserData(nickname1, nickname2)) {
+            cout << "No se pudieron leer los datos de userdata.txt. El archivo no se modifico.\n";
+            return false;
+        }
+        cout << "Bienvenidos nuevamente, " << nickname1 << " y " << nickname2 << "\n";
+        return true;
+    }
+
+    if (GetFileAttributesA(USER_DATA_FILE.c_str()) != INVALID_FILE_ATTRIBUTES) {
+        cout << "No se pudo abrir userdata.txt.\n";
+        return false;
+    }
+
+    cout << "Primera vez que ejecutas el programa.\n";
+    cout << "Ingresa tu nickname (User 1): ";
+    cin >> nickname1;
+    cout << "Ingresa tu nickname (User 2): ";
+    cin >> nickname2;
+    while (nickname2 == nickname1) {
+        cout << "Cada jugador debe tener un nickname distinto. Ingresa otro para User 2: ";
+        cin >> nickname2;
+    }
+
+    if (!saveNickname(nickname1, nickname2)) {
+        cout << "No se pudo guardar userdata.txt.\n";
+        return false;
+    }
+    cout << "Bienvenidos, " << nickname1 << " y " << nickname2 << "\n";
+    return true;
 }
 
 int menu() {
@@ -161,8 +293,11 @@ void start(){
     vector<pair<int, int>> letterPositions;
     bool firstWord = true;
     firstWord = true;
+    bool usedBagChangeThisTurn = false;
 
     dashboard();
+    createBag(1);
+    createBag(2);
 
     int coordX = 7;
     int coordY = 7;
@@ -201,8 +336,22 @@ void start(){
             finalCout();
             break;
         }
+        else if(key == '1'){
+            if (!word.empty()) {
+                lastValidationMessage = "Termina la palabra antes de cambiar el portafichas.";
+            } else if (usedBagChangeThisTurn) {
+                lastValidationMessage = "Ya cambiaste el portafichas este turno.";
+            } else {
+                createBag(turn);
+                usedBagChangeThisTurn = true;
+                lastValidationMessage = "Portafichas cambiado. Solo puedes cambiarlo una vez por turno.";
+            }
+            cout << "\033[2J\033[1;1H";
+            dashboardPrint(coordY, coordX);
+        }
         else{
             if(key == 13){
+                int playerWhoPlayed = turn;
                 lastValidationMessage = "";
                 for(size_t i = 0; i < word.size(); i++) {
                     if (word[i] >= 'A' && word[i] <= 'Z') {
@@ -212,7 +361,7 @@ void start(){
                 bool wasFirstWord = firstWord;
                 bool validPoint = wValidation(word, letterPositions, firstWord);
                 if (validPoint) {
-                    firstWord = false; 
+                    firstWord = false;
                 }
 
                 if (validPoint && !wasFirstWord) {
@@ -273,6 +422,8 @@ void start(){
                                 : validTable[letterPositions[i].first][letterPositions[i].second];
                     }
                 }
+                usedBagChangeThisTurn = false;
+                createBag(playerWhoPlayed); // el portafichas cambia aleatoriamente tras cada jugada
                 word = "";
                 letterPositions.clear();
                 cout << "\033[2J\033[1;1H";
@@ -296,41 +447,33 @@ string changeName(){
     cin >> newNickname1;
     cout << "Ingresa tu nuevo nickname (User 2): ";
     cin >> newNickname2;
+    while (newNickname2 == newNickname1) {
+        cout << "Cada jugador debe tener un nickname distinto. Ingresa otro para User 2: ";
+        cin >> newNickname2;
+    }
 
-    saveNickname(newNickname1, newNickname2);
-    playerName1 = newNickname1;
-    playerName2 = newNickname2;
+    if (saveNickname(newNickname1, newNickname2)) {
+        cout << "Usuarios activos actualizados. Se conservaron sus registros de victorias.\n";
+    } else {
+        cout << "No se pudieron guardar los usuarios en userdata.txt.\n";
+    }
 
     return newNickname1;
 }
 
 void log(){
-    ifstream userFile("userdata.txt");
-
-    if(!userFile.is_open()){
-        cout << "No se pudo cargar los datos.\n";
-        getch();
-        menu();
-        return;
+    cout << "\033[2J\033[1;1H";
+    cout << "REGISTRO DE VICTORIAS\n";
+    for (size_t i = 0; i < userRecords.size(); i++) {
+        cout << userRecords[i].nickname << ": " << userRecords[i].wins << " victorias";
+        if (userRecords[i].nickname == playerName1) {
+            cout << " (Jugador 1)";
+        } else if (userRecords[i].nickname == playerName2) {
+            cout << " (Jugador 2)";
+        }
+        cout << "\n";
     }
-
-    string name1, name2;
-    int victories1 = 0;
-    int victories2 = 0;
-
-    if(userFile >> name1 >> name2 >> victories1 >> victories2){
-        cout << "\033[2J\033[1;1H";
-        cout << endl;
-        cout << "VICTORIAS DE LOS JUGADORES\n";
-        cout << name1 << ": " << victories1 << " victorias\n";
-        cout << name2 << ": " << victories2 << " victorias\n";
-        cout << endl;
-        cout << "(Presiona cualquier tecla para volver al menu)\n";
-    }else{
-        cout << "No se pudieron leer las victorias.\n";
-    }
-
-    userFile.close();
+    cout << "\n(Presiona cualquier tecla para volver al menu)\n";
     getch();
     menu();
 }
@@ -357,6 +500,55 @@ void interactivePanel(int x){
         default:
             cout << "ESA OPCION ES INVALIDA" << "(" << x << ")\n";
     }
+}
+
+// Llena el portafichas del jugador con BAG_SIZE fichas al azar.
+// Solo salen letras que le quedan al jugador, y nunca mas copias de una letra
+// que las que le restan (si una letra se agota, ya no se le vuelve a dar).
+void createBag(int player) {
+    int available[WORD_COUNT];
+    int total = 0;
+    for (int i = 0; i < WORD_COUNT; i++) {
+        available[i] = player == 1 ? player1Cantidad[i] : player2Cantidad[i];
+        total += available[i];
+    }
+
+    for (int slot = 0; slot < BAG_SIZE; slot++) {
+        int chosen = -1; // -1 = casilla vacia (ya no quedan fichas)
+        if (total > 0) {
+            int roll = rand() % total; // cada ficha restante tiene la misma probabilidad
+            for (int i = 0; i < WORD_COUNT; i++) {
+                if (roll < available[i]) {
+                    chosen = i;
+                    break;
+                }
+                roll -= available[i];
+            }
+            available[chosen]--;
+            total--;
+        }
+
+        if (player == 1) {
+            player1Bag[slot] = chosen;
+        } else {
+            player2Bag[slot] = chosen;
+        }
+    }
+}
+
+// Texto del portafichas del jugador, por ejemplo: [A] [E] [CH] [S] [O] [R] [Z]
+string bagLine(int player) {
+    string line = "";
+    for (int slot = 0; slot < BAG_SIZE; slot++) {
+        int letterIndex = player == 1 ? player1Bag[slot] : player2Bag[slot];
+        if (letterIndex >= 0) {
+            if (!line.empty()) {
+                line += " ";
+            }
+            line += "[" + words[letterIndex] + "]";
+        }
+    }
+    return line;
 }
 
 void dashboard(){
@@ -397,6 +589,10 @@ void dashboardPrint(int cursorY, int cursorX){
         }
         panelLines.push_back(line);
     }
+
+    panelLines.push_back("--------------------------------");
+    panelLines.push_back(string("PORTAFICHAS (Jugador ") + to_string(turn) + ")");
+    panelLines.push_back(bagLine(turn));
 
     cout << "   ";
     for (int j = 0; j < 15; j++) {
@@ -759,6 +955,18 @@ bool wValidation(string word, vector<pair<int, int>> letterPositions, bool first
         availableLetterCantidad[i] = turn == 1 ? player1Cantidad[i] : player2Cantidad[i];
     }
 
+    // Fichas que hay en el portafichas del jugador en turno (cuantas copias de cada letra)
+    int bagLetterCantidad[WORD_COUNT];
+    for (int i = 0; i < WORD_COUNT; i++) {
+        bagLetterCantidad[i] = 0;
+    }
+    for (int slot = 0; slot < BAG_SIZE; slot++) {
+        int bagIndex = turn == 1 ? player1Bag[slot] : player2Bag[slot];
+        if (bagIndex >= 0) {
+            bagLetterCantidad[bagIndex]++;
+        }
+    }
+
     size_t wordIndex = 0;
     size_t positionIndex = 0;
     while (wordIndex < word.size()) {
@@ -777,6 +985,13 @@ bool wValidation(string word, vector<pair<int, int>> letterPositions, bool first
                         return false;
                     }
                     availableLetterCantidad[letterIndex]--;
+
+                    if (bagLetterCantidad[letterIndex] <= 0) {
+                        lastValidationMessage = "La ficha " + letter + " no esta en el portafichas del Jugador " +
+                            to_string(turn) + ".";
+                        return false;
+                    }
+                    bagLetterCantidad[letterIndex]--;
                 }
             }
             wordIndex += bytes;
@@ -802,6 +1017,13 @@ bool wValidation(string word, vector<pair<int, int>> letterPositions, bool first
                             return false;
                         }
                         availableLetterCantidad[letterIndex]--;
+
+                        if (bagLetterCantidad[letterIndex] <= 0) {
+                            lastValidationMessage = "La ficha " + letter + " no esta en el portafichas del Jugador " +
+                                to_string(turn) + ".";
+                            return false;
+                        }
+                        bagLetterCantidad[letterIndex]--;
                     }
                 }
 
@@ -823,6 +1045,14 @@ bool wValidation(string word, vector<pair<int, int>> letterPositions, bool first
                     return false;
                 }
                 availableLetterCantidad[letterIndex]--;
+
+                if (bagLetterCantidad[letterIndex] <= 0) {
+                    string messageLetter(1, static_cast<char>(toupper(static_cast<unsigned char>(word[wordIndex]))));
+                    lastValidationMessage = "La ficha " + messageLetter + " no esta en el portafichas del Jugador " +
+                        to_string(turn) + ".";
+                    return false;
+                }
+                bagLetterCantidad[letterIndex]--;
             }
         }
 
@@ -858,38 +1088,23 @@ void finalCout(){
     cout << playerName1 << ": " << pts1 << " puntos\n";
     cout << playerName2 << ": " << pts2 << " puntos\n";
 
-    string storedName1, storedName2;
-    int storedWins1 = 0;
-    int storedWins2 = 0;
-
-    ifstream readFile("userdata.txt");
-    if(readFile >> storedName1 >> storedName2){
-        if(!(readFile >> storedWins1 >> storedWins2)){
-            storedWins1 = 0;
-            storedWins2 = 0;
-        }
-    }
-    readFile.close();
-
-    wins1 = storedWins1;
-    wins2 = storedWins2;
-
     if(pts1 > pts2){
         cout << "Felicidades " << playerName1 << " has ganado!!\n";
-        wins1++;
+        int winnerIndex = findUserRecord(playerName1);
+        if (winnerIndex >= 0) {
+            userRecords[winnerIndex].wins++;
+        }
     }else if(pts1 < pts2){
         cout << "Felicidades " << playerName2 << " has ganado!!\n";
-        wins2++;
+        int winnerIndex = findUserRecord(playerName2);
+        if (winnerIndex >= 0) {
+            userRecords[winnerIndex].wins++;
+        }
     }else{
         cout << "El juego termino en empate.\n";
     }
 
-    ofstream userFile("userdata.txt");
-    if(userFile.is_open()){
-        userFile << playerName1 << '\n' << playerName2 << '\n';
-        userFile << wins1 << '\n' << wins2 << '\n';
-        userFile.close();
-    }else{
+    if (!saveUserData()) {
         cout << "No se pudo guardar el resultado.\n";
     }
 }
