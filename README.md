@@ -30,7 +30,7 @@ Juego de consola para **dos jugadores** escrito en C++ sobre un tablero de **15 
 | Aspecto | Detalle |
 | --- | --- |
 | Lenguaje | C++ (un solo archivo: `main.cpp`, ~860 líneas) |
-| Jugadores | 2, con apodos y victorias persistentes en `userdata.txt` |
+| Jugadores | 2 activos por partida; cada nickname conserva sus victorias y puntos acumulados en `userdata.txt` |
 | Tablero | `15 x 15`, cursor inicial en la casilla central `[7][7]` |
 | Entrada | Flechas (mover), letras (escribir), `Enter` (validar), `y`/`n` (confirmar palabra), `.` (terminar la partida) |
 | Turnos | Sí, alternan J1 / J2 después de cada `Enter` |
@@ -38,8 +38,8 @@ Juego de consola para **dos jugadores** escrito en C++ sobre un tablero de **15 
 | Puntaje | Por valor de letra (1 a 10 puntos), contando solo las letras **nuevas** de la palabra |
 | Fin de partida | Cuando se presiona `.` o cuando a algún jugador le quedan menos de 10 fichas |
 | Validación de existencia | **Manual**: el programa pregunta `y/n` (ya no hay diccionario interno) |
-| Persistencia | Apodos y victorias de cada jugador (`userdata.txt`) |
-| Registro de resultados | Opción 3 del menú: muestra las victorias acumuladas |
+| Persistencia | Nicknames activos, victorias y puntos acumulados por perfil; se conserva el historial al cambiar usuarios |
+| Registro de resultados | Opción 3 del menú: muestra las victorias y puntos acumulados de todos los nicknames guardados |
 
 ---
 
@@ -68,37 +68,41 @@ scrabbleProyecto/
 ├── README.md       # Esta documentación
 ├── LICENSE
 ├── .gitignore
-└── userdata.txt    # Se crea solo en la primera ejecución (4 líneas, ver abajo)
+└── userdata.txt    # Se crea en la primera ejecución y conserva todos los perfiles
 ```
 
-Formato de `userdata.txt` (un dato por línea):
+`userdata.txt` guarda los dos nicknames activos y el registro de victorias y puntos acumulados de todos los nicknames usados:
 
 ```
-<apodo del jugador 1>
-<apodo del jugador 2>
-<victorias del jugador 1>
-<victorias del jugador 2>
+SCRABBLE_USERS_V2
+<nickname activo del jugador 1>
+<nickname activo del jugador 2>
+<cantidad de perfiles>
+<nickname> <victorias> <puntos acumulados>
+...
 ```
 
-Si el archivo solo tiene los dos apodos (formato antiguo), las victorias se toman como `0`.
+Al cambiar los nombres desde el menú se cambia de usuarios: los perfiles previos se conservan y los nuevos comienzan con `0` victorias y `0` puntos. Si se vuelve a usar un nickname guardado, recupera sus estadísticas. Al finalizar una partida se suman los puntos obtenidos por cada jugador a su perfil. La opción 3 muestra el registro de todos los perfiles. Los formatos anteriores se migran automáticamente al nuevo formato; los puntos de partidas anteriores no disponibles en esos archivos comienzan en `0`.
 
 ---
 
 ## 4. Cómo se juega
 
-1. Al abrir el programa por primera vez se piden los apodos de los dos jugadores; se guardan en `userdata.txt` y no se vuelven a pedir.
-2. En el menú se escribe `1` para jugar.
-3. Se dibuja el tablero con el cursor (`╬`) en el centro y, a la derecha, el panel **FICHAS QUE QUEDAN** del jugador en turno, agrupado por puntos.
-4. El jugador en turno **mueve el cursor** con las flechas y **escribe una letra por casilla** hasta formar su palabra.
-5. Con **Enter** se valida la palabra:
+1. Al abrir el programa por primera vez se piden los nicknames de los dos jugadores; se guardan como los usuarios activos.
+2. La opción `2` del menú permite cambiar los dos usuarios activos. Cada nickname conserva sus victorias y puntos acumulados; los nicknames nuevos comienzan con `0`.
+3. La opción `3` muestra las victorias y los puntos acumulados de todos los perfiles guardados.
+4. En el menú se escribe `1` para jugar.
+5. Se dibuja el tablero con filas y columnas numeradas del 1 al 15, el cursor (`╬`) en el centro y, a la derecha, el panel **FICHAS QUE QUEDAN** del jugador en turno, agrupado por puntos.
+6. El jugador en turno **mueve el cursor** con las flechas y **escribe una letra por casilla** hasta formar su palabra.
+7. Con **Enter** se valida la palabra:
    - Se comprueba la forma de la palabra y que el jugador tenga fichas suficientes.
    - El programa muestra `Palabra: <palabra> ¿Desea aceptar esta palabra? y/n:`. Se responde `y` (la palabra existe) o `n` (se rechaza). Cualquier otra respuesta vuelve a preguntar.
    - Si es aceptada y cumple las reglas de conexión, se suman los puntos de las letras nuevas, se descuentan las fichas usadas y las letras quedan fijas en el tablero. El mensaje muestra `PALABRA VALIDA, FELICIDADES (+N puntos)`.
    - Si no es válida: se muestra el motivo, las letras escritas se borran y el turno pasa igualmente al otro jugador.
-6. La partida termina cuando:
+8. La partida termina cuando:
    - se presiona la tecla **punto (`.`)**, o
    - después de una palabra válida a algún jugador le quedan **menos de 10 fichas** en total.
-7. Al terminar se muestra el resumen de puntos, se anuncia al ganador (o empate) y se guarda la victoria en `userdata.txt`.
+9. Al terminar se muestra el resumen de puntos, se anuncia al ganador (o empate), se suman los puntos de la partida a cada perfil y se suma la victoria al perfil ganador en `userdata.txt`.
 
 El encabezado del tablero muestra siempre los apodos, de quién es el turno, los puntos de cada jugador y el último mensaje de validación.
 

@@ -24,11 +24,13 @@ string lastValidationMessage = "";
 struct UserRecord {
     string nickname;
     int wins;
+    long long totalPoints;
 };
 
 vector<UserRecord> userRecords;
 const string USER_DATA_FILE = "userdata.txt";
-const string USER_DATA_VERSION = "SCRABBLE_USERS_V1";
+const string LEGACY_USER_DATA_VERSION = "SCRABBLE_USERS_V1";
+const string USER_DATA_VERSION = "SCRABBLE_USERS_V2";
 
 string words[] = {"A", "E", "I", "L", "N", "O", "R", "S", "T", "U", "D", "G", "B", "C", "M", "P", "F", "H", "V", "Y", "CH", "Q", "J", "LL", "Ñ", "RR", "X", "Z"};
 const int WORD_COUNT = sizeof(words) / sizeof(words[0]);
@@ -105,6 +107,7 @@ void ensureUserRecord(const string& nickname) {
         UserRecord record;
         record.nickname = nickname;
         record.wins = 0;
+        record.totalPoints = 0;
         userRecords.push_back(record);
     }
 }
@@ -120,7 +123,8 @@ bool saveUserData() {
     userFile << playerName1 << '\n' << playerName2 << '\n';
     userFile << userRecords.size() << '\n';
     for (size_t i = 0; i < userRecords.size(); i++) {
-        userFile << userRecords[i].nickname << ' ' << userRecords[i].wins << '\n';
+        userFile << userRecords[i].nickname << ' ' << userRecords[i].wins << ' '
+                 << userRecords[i].totalPoints << '\n';
     }
     userFile.close();
     if (userFile.fail()) {
@@ -137,7 +141,8 @@ bool loadUserData(string& nickname1, string& nickname2) {
         return false;
     }
 
-    if (firstValue == USER_DATA_VERSION) {
+    if (firstValue == USER_DATA_VERSION || firstValue == LEGACY_USER_DATA_VERSION) {
+        bool hasPointTotals = firstValue == USER_DATA_VERSION;
         size_t recordCount;
         if (!(userFile >> nickname1 >> nickname2 >> recordCount) || recordCount > 100000) {
             return false;
@@ -146,7 +151,9 @@ bool loadUserData(string& nickname1, string& nickname2) {
         for (size_t i = 0; i < recordCount; i++) {
             string nickname;
             int wins;
-            if (!(userFile >> nickname >> wins) || wins < 0) {
+            long long totalPoints = 0;
+            if (!(userFile >> nickname >> wins) || wins < 0 ||
+                (hasPointTotals && (!(userFile >> totalPoints) || totalPoints < 0))) {
                 return false;
             }
             int index = findUserRecord(nickname);
@@ -155,6 +162,7 @@ bool loadUserData(string& nickname1, string& nickname2) {
                 index = findUserRecord(nickname);
             }
             userRecords[index].wins += wins;
+            userRecords[index].totalPoints += totalPoints;
         }
     } else {
         nickname1 = firstValue;
@@ -463,9 +471,10 @@ string changeName(){
 
 void log(){
     cout << "\033[2J\033[1;1H";
-    cout << "REGISTRO DE VICTORIAS\n";
+    cout << "REGISTRO DE RESULTADOS\n";
     for (size_t i = 0; i < userRecords.size(); i++) {
-        cout << userRecords[i].nickname << ": " << userRecords[i].wins << " victorias";
+        cout << userRecords[i].nickname << ": " << userRecords[i].wins << " victorias, "
+             << userRecords[i].totalPoints << " puntos acumulados";
         if (userRecords[i].nickname == playerName1) {
             cout << " (Jugador 1)";
         } else if (userRecords[i].nickname == playerName2) {
@@ -1087,6 +1096,15 @@ void finalCout(){
     cout << "JUEGO FINALIZADO. RESUMEN DE PUNTOS: \n";
     cout << playerName1 << ": " << pts1 << " puntos\n";
     cout << playerName2 << ": " << pts2 << " puntos\n";
+
+    int player1Index = findUserRecord(playerName1);
+    int player2Index = findUserRecord(playerName2);
+    if (player1Index >= 0) {
+        userRecords[player1Index].totalPoints += pts1;
+    }
+    if (player2Index >= 0) {
+        userRecords[player2Index].totalPoints += pts2;
+    }
 
     if(pts1 > pts2){
         cout << "Felicidades " << playerName1 << " has ganado!!\n";
