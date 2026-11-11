@@ -63,6 +63,7 @@ string changeName();
 void log();
 void exit();
 void interactivePanel(int x);
+void instructions(); 
 
 // IN-GAME FUNCTIONS
 void createBag(int player);
@@ -100,6 +101,14 @@ int findUserRecord(const string& nickname) {
         }
     }
     return -1;
+}
+
+void instructions(){
+    cout << "TABLERO 15 X 15\n- Debe iniciar con una letra en [7][7].\n- Para cambiar las letras del portafichas presione 1 (Esto solo se puede realizar una vez por turno.\n- Si desea finalizar el juego presione .\n";
+    
+    cout << "Presione cualquier tecla para volver al menu"; 
+    getch(); 
+    menu();
 }
 
 void ensureUserRecord(const string& nickname) {
@@ -285,7 +294,7 @@ int menu() {
 
     cout << string(width, '=') << "\n";
 
-    cout << "Seleccione la opcion que desea\n- Iniciar Juego (1)\n- Cambiar nombre (2)\n- Mostrar Registro de resultados (3)\n- Salir del juego (4)\n = ";
+    cout << "Seleccione la opcion que desea\n- Iniciar Juego (1)\n- Cambiar nombre (2)\n- Mostrar Registro de resultados (3)\n- Instrucciones (4)\n- Salir del juego (5)\n= ";
     cin >> option;
     interactivePanel(option);
     return option;
@@ -504,7 +513,10 @@ void interactivePanel(int x){
             log();
             break;
         case 4:
-            exit();
+            instructions();
+            break;
+        case 5: 
+            exit(); 
             break;
         default:
             cout << "ESA OPCION ES INVALIDA" << "(" << x << ")\n";
