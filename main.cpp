@@ -3,10 +3,10 @@
 #include <string>
 #include <conio.h>
 #include <cctype>
-#include <cstdlib>
-#include <chrono>
 #include <vector>
 #include <windows.h>
+#include <cstdlib>
+#include <chrono>
 
 using namespace std;
 
