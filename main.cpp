@@ -443,14 +443,14 @@ void start(){
                 createBag(playerWhoPlayed); // el portafichas cambia aleatoriamente tras cada jugada
                 word = "";
                 letterPositions.clear();
-                cout << "\033[2J\033[1;1H";
+                cout << "\033[2J\033[1;1H"; // Otro clear
                 dashboardPrint(coordY, coordX);
             }
             else{
                 table[coordY][coordX] = static_cast<char>(key);
                 word += static_cast<char>(key);
                 letterPositions.push_back({coordY, coordX});
-                cout << "\033[2J\033[1;1H";
+                cout << "\033[2J\033[1;1H"; // y otro
                 dashboardPrint(coordY, coordX);
             }
         }
@@ -524,8 +524,6 @@ void interactivePanel(int x){
 }
 
 // Llena el portafichas del jugador con BAG_SIZE fichas al azar.
-// Solo salen letras que le quedan al jugador, y nunca mas copias de una letra
-// que las que le restan (si una letra se agota, ya no se le vuelve a dar).
 void createBag(int player) {
     int available[WORD_COUNT];
     int total = 0;
@@ -557,7 +555,7 @@ void createBag(int player) {
     }
 }
 
-// Texto del portafichas del jugador, por ejemplo: [A] [E] [CH] [S] [O] [R] [Z]
+// Texto del portafichas del jugador en la interfaz
 string bagLine(int player) {
     string line = "";
     for (int slot = 0; slot < BAG_SIZE; slot++) {
@@ -659,7 +657,6 @@ int findLetterIndex(string letter) {
     return -1;
 }
 
-// Descuenta una ficha del jugador indicado (antes se hacia con una referencia "int& remaining").
 void consumeTile(int player, int letterIndex) {
     if (letterIndex >= 0) {
         if (player == 1) {
@@ -748,8 +745,7 @@ int singleLetterPoints(char letter) {
     }
 }
 
-// Devuelve cuantos bytes ocupa la Ñ en la posicion i (2 en UTF-8, 1 en una sola codificacion)
-// o 0 si en esa posicion no hay una Ñ. (Antes: bool isEnye(..., size_t& bytes))
+// Devuelve cuantos bytes ocupa la Ñ en la posicion i (2 en UTF-8, 1 en una sola codificacion) o 0 si en esa posicion no hay una Ñ.
 size_t bytesEnye(string word, size_t i) {
     unsigned char current = static_cast<unsigned char>(word[i]);
 
@@ -769,7 +765,6 @@ size_t bytesEnye(string word, size_t i) {
     return 0;
 }
 
-// Ordena los valores de menor a mayor).
 vector<int> sortedCoordinates(vector<int> values) {
     for (size_t i = 1; i < values.size(); i++) {
         int current = values[i];
